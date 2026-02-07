@@ -1112,8 +1112,7 @@ window.addEventListener("unhandledrejection", function (e) {
     ctx.fillText("Tap in the zone", bx, 36);
   }
 
-  // ---------- Reset & Export ----------
-  let resetStep = 0;
+
   // ---------- Reset & Export ----------
 let resetStep = 0;
 
