@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#223a61"/><stop offset="100%" stop-color="#0f1a2f"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#edc29f"/><stop offset="100%" stop-color="#cf9b75"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6ad0ff"/><stop offset="100%" stop-color="#1a9eff"/>
+    </linearGradient>
+  </defs>
+  <rect width="420" height="420" rx="36" fill="url(#bg)"/>
+  <ellipse cx="210" cy="380" rx="90" ry="16" fill="#0b1425" opacity="0.55"/>
+  <path d="M144.0 175 Q210 150 276.0 175 L262.0 280 L158.0 280Z" fill="#1d2c45" opacity="0.65"/>
+  <rect x="147.0" y="170" width="126" height="70" rx="34" fill="url(#shirt)"/>
+  <rect x="158.0" y="205" width="104" height="110" rx="30" fill="url(#shirt)"/>
+  <rect x="133.0" y="190" width="26" height="125" rx="15" fill="url(#skin)"/>
+  <rect x="261.0" y="190" width="26" height="125" rx="15" fill="url(#skin)"/>
+  <ellipse cx="146.0" cy="315" rx="12" ry="12" fill="#c89168"/>
+  <ellipse cx="274.0" cy="315" rx="12" ry="12" fill="#c89168"/>
+  <rect x="167" y="305" width="37" height="70" rx="14" fill="#3a4863"/>
+  <rect x="216" y="305" width="37" height="70" rx="14" fill="#3a4863"/>
+  <rect x="165" y="368" width="47" height="14" rx="7" fill="#273245"/>
+  <rect x="212" y="368" width="47" height="14" rx="7" fill="#273245"/>
+  <rect x="146" y="70" width="128" height="130" rx="50" fill="url(#skin)"/>
+  <path d="M146 125 Q210 55 274 125 L274 90 Q210 32 146 90Z" fill="#1a1f2d"/>
+  <circle cx="180" cy="128" r="7" fill="#1e2435"/><circle cx="240" cy="128" r="7" fill="#1e2435"/>
+  <path d="M190 165 Q210 178 230 165" stroke="#2f3035" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M177 112 L195 109 M225 109 L243 112" stroke="#2a2e3f" stroke-width="4" stroke-linecap="round"/>
+  <text x="28" y="42" fill="#d6e6ff" font-size="22" font-weight="700">STAGE 1</text>
+</svg>
