@@ -117,6 +117,12 @@
 
 <script>
 (() => {
+window.addEventListener("error", (e) => {
+  alert("JS Error: " + (e.message || e.error));
+});
+window.addEventListener("unhandledrejection", (e) => {
+  alert("Promise Error: " + (e.reason?.message || e.reason));
+});
   // ---------- Utilities ----------
   const $ = (sel) => document.querySelector(sel);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
