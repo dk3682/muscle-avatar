@@ -907,103 +907,102 @@ window.addEventListener("unhandledrejection", function (e) {
   }
 
   function drawHair(ctx, x, y, faceW, faceH, styleIndex, color){
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = color;
-    ctx.strokeStyle = "rgba(0,0,0,0.25)";
-    ctx.lineWidth = 3;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "rgba(0,0,0,0.25)";
+  ctx.lineWidth = 3;
 
-    const top = y - faceH*0.22;
-    const left = x - faceW*0.55;
-    const right = x + faceW*0.55;
+  const top = y - faceH*0.22;
+  const left = x - faceW*0.55;
+  const right = x + faceW*0.55;
 
-    ctx.beginPath();
-    switch(styleIndex){
-      case 0: { // buzz
-        ctx.globalAlpha = 0.85;
-        ctx.ellipse(x, y-faceH*0.18, faceW*0.46, faceH*0.22, 0, 0, Math.PI*2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        break;
-      }
-      case 1: { // short
-        roundedRect(ctx, x-faceW*0.54, top, faceW*1.08, faceH*0.38, 42);
-        ctx.fill();
-        break;
-      }
-      case 2: { // side part
-        roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.40, 46);
-        ctx.fill();
-        ctx.clearRect(x+faceW*0.06, top+18, faceW*0.08, faceH*0.32);
-        break;
-      }
-      case 3: { // messy
-        roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.38, 44);
-        ctx.fill();
-        for(let i=0;i<7;i++){
-          ctx.beginPath();
-          ctx.moveTo(x-faceW*0.40+i*18, top+10);
-          ctx.lineTo(x-faceW*0.46+i*18, top-18);
-          ctx.lineTo(x-faceW*0.30+i*18, top-8);
-          ctx.closePath();
-          ctx.fill();
-        }
-        break;
-      }
-      case 4: { // wavy
-        roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.44, 48);
-        ctx.fill();
-        ctx.globalAlpha=0.25;
-        ctx.strokeStyle="rgba(255,255,255,0.25)";
-        ctx.lineWidth=4;
-        for(let i=0;i<5;i++){
-          ctx.beginPath();
-          ctx.moveTo(x-faceW*0.46+i*42, top+20);
-          ctx.quadraticCurveTo(x-faceW*0.40+i*42, top+52, x-faceW*0.34+i*42, top+24);
-          ctx.stroke();
-        }
-        ctx.globalAlpha=1;
-        break;
-      }
-      case 5: { // curly
-        roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.46, 52);
-        ctx.fill();
-        for(let i=0;i<14;i++){
-          const px = x-faceW*0.48 + (i%7)*40;
-          const py = top+14 + Math.floor(i/7)*42;
-          ctx.beginPath();
-          ctx.arc(px, py, 14, 0, Math.PI*2);
-          ctx.fill();
-        }
-        break;
-      }
-      case 6: { // slick back
-        roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.36, 44);
-        ctx.fill();
-        ctx.globalAlpha=0.22;
-        ctx.strokeStyle="rgba(255,255,255,0.35)";
-        ctx.lineWidth=4;
-        for(let i=0;i<6;i++){
-          ctx.beginPath();
-          ctx.moveTo(left+20+i*28, top+18);
-          ctx.lineTo(left+50+i*28, top+72);
-          ctx.stroke();
-        }
-        ctx.globalAlpha=1;
-        break;
-      }
-      case 7: { // medium
-        roundedRect(ctx, x-faceW*0.58, top, faceW*1.16, faceH*0.52, 54);
-        ctx.fill();
-        // sides
-        roundedRect(ctx, x-faceW*0.64, y-faceH*0.08, faceW*0.22, faceH*0.44, 40);
-        ctx.fill();
-        roundedRect(ctx, x+faceW*0.42, y-faceH*0.08, faceW*0.22, faceH*0.44, 40);
-        ctx.fill();
-        break;
-      }
+  ctx.beginPath();
+  switch(styleIndex){
+    case 0: { // buzz
+      ctx.globalAlpha = 0.85;
+      ctx.ellipse(x, y-faceH*0.18, faceW*0.46, faceH*0.22, 0, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      break;
     }
-    ctx.stroke();
+    case 1: { // short
+      roundedRect(ctx, x-faceW*0.54, top, faceW*1.08, faceH*0.38, 42);
+      ctx.fill();
+      break;
+    }
+    case 2: { // side part
+      roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.40, 46);
+      ctx.fill();
+      ctx.clearRect(x+faceW*0.06, top+18, faceW*0.08, faceH*0.32);
+      break;
+    }
+    case 3: { // messy
+      roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.38, 44);
+      ctx.fill();
+      for(let i=0;i<7;i++){
+        ctx.beginPath();
+        ctx.moveTo(x-faceW*0.40+i*18, top+10);
+        ctx.lineTo(x-faceW*0.46+i*18, top-18);
+        ctx.lineTo(x-faceW*0.30+i*18, top-8);
+        ctx.closePath();
+        ctx.fill();
+      }
+      break;
+    }
+    case 4: { // wavy
+      roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.44, 48);
+      ctx.fill();
+      ctx.globalAlpha=0.25;
+      ctx.strokeStyle="rgba(255,255,255,0.25)";
+      ctx.lineWidth=4;
+      for(let i=0;i<5;i++){
+        ctx.beginPath();
+        ctx.moveTo(x-faceW*0.46+i*42, top+20);
+        ctx.quadraticCurveTo(x-faceW*0.40+i*42, top+52, x-faceW*0.34+i*42, top+24);
+        ctx.stroke();
+      }
+      ctx.globalAlpha=1;
+      break;
+    }
+    case 5: { // curly
+      roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.46, 52);
+      ctx.fill();
+      for(let i=0;i<14;i++){
+        const px = x-faceW*0.48 + (i%7)*40;
+        const py = top+14 + Math.floor(i/7)*42;
+        ctx.beginPath();
+        ctx.arc(px, py, 14, 0, Math.PI*2);
+        ctx.fill();
+      }
+      break;
+    }
+    case 6: { // slick back
+      roundedRect(ctx, x-faceW*0.56, top, faceW*1.12, faceH*0.36, 44);
+      ctx.fill();
+      ctx.globalAlpha=0.22;
+      ctx.strokeStyle="rgba(255,255,255,0.35)";
+      ctx.lineWidth=4;
+      for(let i=0;i<6;i++){
+        ctx.beginPath();
+        ctx.moveTo(left+20+i*28, top+18);
+        ctx.lineTo(left+50+i*28, top+72);
+        ctx.stroke();
+      }
+      ctx.globalAlpha=1;
+      break;
+    }
+    case 7: { // medium
+      roundedRect(ctx, x-faceW*0.58, top, faceW*1.16, faceH*0.52, 54);
+      ctx.fill();
+      // sides
+      roundedRect(ctx, x-faceW*0.64, y-faceH*0.08, faceW*0.22, faceH*0.44, 40);
+      ctx.fill();
+      roundedRect(ctx, x+faceW*0.42, y-faceH*0.08, faceW*0.22, faceH*0.44, 40);
+      ctx.fill();
+      break;
+    }
   }
+  ctx.stroke();
+}
 
   function drawFaceFeatures(ctx, x, y, faceW, faceH){
     // Brows
@@ -1115,7 +1114,12 @@ window.addEventListener("unhandledrejection", function (e) {
 
   // ---------- Reset & Export ----------
   let resetStep = 0;
-  $("#btnReset").addEventListener("click", () => {
+  // ---------- Reset & Export ----------
+let resetStep = 0;
+
+const btnReset = $("#btnReset");
+if (btnReset) {
+  btnReset.addEventListener("click", () => {
     if (resetStep === 0) {
       resetStep = 1;
       toast("Tap Reset again to confirm.");
@@ -1130,8 +1134,11 @@ window.addEventListener("unhandledrejection", function (e) {
     toast("Reset complete.");
     boot();
   });
+}
 
-  $("#btnExport").addEventListener("click", async () => {
+const btnExport = $("#btnExport");
+if (btnExport) {
+  btnExport.addEventListener("click", async () => {
     try{
       const data = JSON.stringify(state, null, 2);
       await navigator.clipboard.writeText(data);
@@ -1141,6 +1148,7 @@ window.addEventListener("unhandledrejection", function (e) {
       console.log("SAVE DATA:", state);
     }
   });
+}
 
   // ---------- Helpers ----------
 function escapeHtml(s){
