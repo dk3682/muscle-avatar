@@ -3,33 +3,43 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Muscle Avatar - debug</title>
+  <title>Muscle Avatar</title>
+
   <style>
-    body{margin:0;font-family:-apple-system,system-ui}
-    #log{white-space:pre-wrap;padding:12px;font-size:12px;line-height:1.4;background:#111;color:#ddd;min-height:100vh}
-    .ok{color:#34c759}.ng{color:#ff3b30}
+    body{margin:0;font-family:-apple-system,system-ui;background:#0f1018;color:#e7e7ea;}
+    #root{padding:14px;}
+    #toast{
+      position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+      background:rgba(0,0,0,0.75); color:#fff;
+      padding:10px 14px; border-radius:999px;
+      opacity:0; pointer-events:none; transition:opacity .15s;
+      font-weight:700; font-size:13px;
+    }
+    #toast.show{opacity:1;}
   </style>
 
   <script>
-    (function(){
-      const log=(m,cls)=>{
-        const el=document.getElementById('log')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'log'}));
-        const d=document.createElement('div'); if(cls)d.className=cls; d.textContent=m; el.appendChild(d);
-      };
-      log('BOOT: head script ran','ok');
-      window.addEventListener('error',e=>log(`window.error: ${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`,'ng'));
-      window.addEventListener('unhandledrejection',e=>log(`unhandledrejection: ${String(e.reason)}`,'ng'));
-      window.__log=log;
-    })();
+    // iPhone Safariでもエラーを画面に出す
+    window.addEventListener('error', (e) => {
+      alert(`JS Error: ${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`);
+    });
+    window.addEventListener('unhandledrejection', (e) => {
+      alert(`Promise Error: ${String(e.reason)}`);
+    });
   </script>
 </head>
 
 <body>
-  <div id="log"></div>
+  <!-- あなたの app.js が必須で参照する要素 -->
+  <div id="root"></div>
+  <div id="toast"></div>
 
-  <script>__log('ABOUT TO LOAD: app.js','ok');</script>
+  <!-- optional: ボタンは無くても落ちないように app.js 側ガード済みだが、UIに出したければ置く -->
+  <div style="position:fixed; top:12px; right:12px; display:flex; gap:8px; z-index:10;">
+    <button id="btnExport">Export</button>
+    <button id="btnReset">Reset</button>
+  </div>
+
   <script src="./app.js"></script>
-  <script>__log('LOADED: app.js (script tag finished)','ok');</script>
-
 </body>
 </html>
