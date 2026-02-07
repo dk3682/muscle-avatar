@@ -1,30 +1,23 @@
-// ---- Global error handler (production-friendly) ----
-(() => {
+// ---- Global error handler (safe) ----
+window.addEventListener("error", function (e) {
+  const message = e && e.message ? e.message : String(e);
+  console.error("JS Error:", message, e);
 
-  window.addEventListener("error", function (e) {
-    const message = e && e.message ? e.message : String(e);
+  // toast は window.toast 経由で使う（未定義でも落ちない）
+  if (typeof window.toast === "function") {
+    window.toast("Error: " + message);
+  }
+});
 
-    // 開発用ログ
-    console.error("JS Error:", message, e);
+window.addEventListener("unhandledrejection", function (e) {
+  const r = e && e.reason;
+  const msg = (r && r.message) ? r.message : String(r);
+  console.error("Promise Error:", msg, e);
 
-    // 画面通知（toastが存在する場合だけ）
-    if (typeof toast === "function") {
-      toast("Error: " + message);
-    }
-  });
-
-  window.addEventListener("unhandledrejection", function (e) {
-    const r = e && e.reason;
-    const msg = (r && r.message) ? r.message : String(r);
-
-    console.error("Promise Error:", msg, e);
-
-    if (typeof toast === "function") {
-      toast("Error: " + msg);
-    }
-  });
-
-})();
+  if (typeof window.toast === "function") {
+    window.toast("Error: " + msg);
+  }
+});
   // ---------- Utilities ----------
   const $ = (sel) => document.querySelector(sel);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -43,7 +36,7 @@
     clearTimeout(toast._tm);
     toast._tm = setTimeout(()=>t.classList.remove("show"), 1400);
   };
-
+window.toast = toast;
   // ---------- Storage ----------
   const KEY = "muscle_avatar_save_v1";
   const load = () => {
