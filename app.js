@@ -1,22 +1,13 @@
-// ---- Global error handler (safe) ----
+  alert("SCRIPT START");
+(() => {
 window.addEventListener("error", function (e) {
-  const message = e && e.message ? e.message : String(e);
-  console.error("JS Error:", message, e);
-
-  // toast は window.toast 経由で使う（未定義でも落ちない）
-  if (typeof window.toast === "function") {
-    window.toast("Error: " + message);
-  }
+  alert("JS Error: " + (e && e.message ? e.message : String(e)));
 });
 
 window.addEventListener("unhandledrejection", function (e) {
-  const r = e && e.reason;
-  const msg = (r && r.message) ? r.message : String(r);
-  console.error("Promise Error:", msg, e);
-
-  if (typeof window.toast === "function") {
-    window.toast("Error: " + msg);
-  }
+  var r = e && e.reason;
+  var msg = (r && r.message) ? r.message : String(r);
+  alert("Promise Error: " + msg);
 });
   // ---------- Utilities ----------
   const $ = (sel) => document.querySelector(sel);
@@ -36,7 +27,7 @@ window.addEventListener("unhandledrejection", function (e) {
     clearTimeout(toast._tm);
     toast._tm = setTimeout(()=>t.classList.remove("show"), 1400);
   };
-window.toast = toast;
+
   // ---------- Storage ----------
   const KEY = "muscle_avatar_save_v1";
   const load = () => {
