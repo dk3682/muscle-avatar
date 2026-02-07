@@ -1,23 +1,35 @@
 <!doctype html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Test App</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Muscle Avatar - debug</title>
+  <style>
+    body{margin:0;font-family:-apple-system,system-ui}
+    #log{white-space:pre-wrap;padding:12px;font-size:12px;line-height:1.4;background:#111;color:#ddd;min-height:100vh}
+    .ok{color:#34c759}.ng{color:#ff3b30}
+  </style>
+
+  <script>
+    (function(){
+      const log=(m,cls)=>{
+        const el=document.getElementById('log')||document.body.appendChild(Object.assign(document.createElement('div'),{id:'log'}));
+        const d=document.createElement('div'); if(cls)d.className=cls; d.textContent=m; el.appendChild(d);
+      };
+      log('BOOT: head script ran','ok');
+      window.addEventListener('error',e=>log(`window.error: ${e.message} @ ${e.filename}:${e.lineno}:${e.colno}`,'ng'));
+      window.addEventListener('unhandledrejection',e=>log(`unhandledrejection: ${String(e.reason)}`,'ng'));
+      window.__log=log;
+    })();
+  </script>
 </head>
-<body style="background:#111;color:#fff;font-family:sans-serif;padding:20px;">
 
-<h1>Muscle Avatar TEST</h1>
+<body>
+  <div id="log"></div>
 
-<div id="app">Loading...</div>
-
-<script>
-alert("JS LOADED");
-
-document.getElementById("app").innerHTML = "JavaScript is working!";
-
-console.log("Script executed");
-</script>
+  <script>__log('ABOUT TO LOAD: app.js','ok');</script>
+  <script src="./app.js"></script>
+  <script>__log('LOADED: app.js (script tag finished)','ok');</script>
 
 </body>
 </html>
