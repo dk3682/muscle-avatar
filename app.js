@@ -1,997 +1,326 @@
-/* Muscle Avatar - stable rebuild for GitHub Pages + iPhone Safari
-   Requires: #root, #toast, optional #btnReset, #btnExport (provided in index.html)
-*/
-
 (function () {
-  "use strict";
+  'use strict';
 
-  // ---------- Error handler (no alert; console + toast if available) ----------
-  window.addEventListener("error", function (e) {
-    try {
-      var msg = (e && e.message) ? e.message : String(e);
-      console.error("JS Error:", msg, e);
-      if (typeof window.toast === "function") window.toast("エラー: " + msg);
-    } catch (_) {}
-  });
+  const $ = (s) => document.querySelector(s);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const KEY = 'muscle_avatar_save_v2';
+  const state = load() || defaultState();
+  let run = null;
 
-  window.addEventListener("unhandledrejection", function (e) {
-    try {
-      var r = e && e.reason;
-      var msg = (r && r.message) ? r.message : String(r);
-      console.error("Promise Error:", msg, e);
-      if (typeof window.toast === "function") window.toast("エラー: " + msg);
-    } catch (_) {}
-  });
+  const STAGE_THRESHOLDS = [0, 6, 12, 18, 24, 30];
 
-  // ---------- Utilities ----------
-  function $(sel) { return document.querySelector(sel); }
-  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
-  function lerp(a, b, t) { return a + (b - a) * t; }
-  function nowDateKey() {
-    var d = new Date();
-    var y = d.getFullYear();
-    var m = String(d.getMonth() + 1).padStart(2, "0");
-    var da = String(d.getDate()).padStart(2, "0");
-    return y + "-" + m + "-" + da;
-  }
-  function escapeHtml(s) {
-    return String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  // ---------- Toast ----------
-  function toast(msg) {
-    var t = $("#toast");
-    if (!t) { console.log("toast:", msg); return; }
-    t.textContent = msg;
-    t.classList.add("show");
-    clearTimeout(toast._tm);
-    toast._tm = setTimeout(function () { t.classList.remove("show"); }, 1400);
-  }
-  window.toast = toast;
-
-  // ---------- Storage ----------
-  var KEY = "muscle_avatar_save_v1";
-
-  function load() {
-    try {
-      var raw = localStorage.getItem(KEY);
-      if (!raw) return null;
-      return JSON.parse(raw);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
-  }
-
-  // ---------- Default State ----------
   function defaultState() {
     return {
       profileLocked: false,
-      createdAt: null,
-      profile: {
-        name: "",
-        skinTone: 3,
-        skinUndertone: 1,
-        faceShape: 1,
-        hairStyle: 0,
-        hairColor: 0,
-        eyes: 0,
-        brows: 0,
-        mouth: 0,
-        beard: 0
-      },
+      profile: { name: '', hair: 0, tone: 2 },
       progress: {
-        chest: 8,
-        shoulders: 8,
-        arms: 8,
-        xp: 0,
-        level: 1,
-        fatigue: 0,
-        lastDay: null,
-        setsLeft: 3,
-        streak: 0,
-        totalSets: 0
+        chest: 8, shoulders: 8, arms: 8,
+        level: 0, xp: 0, totalSets: 0,
+        setsLeft: 3, fatigue: 0,
+        streak: 0, lastTrainingDate: null,
+        dailyGoalDoneDate: null,
+        trainingLog: []
       }
     };
   }
 
-  // ---------- Options ----------
-  var SKIN_BASE = ["#f7e6d6","#f0d6bf","#e7c3a5","#d8ab88","#c79068","#a8734f","#7c5337","#553526"];
-  var UNDERTONE = [
-    {name:"クール", tint:"#a8b9ff"},
-    {name:"ニュートラル", tint:"#ffffff"},
-    {name:"ウォーム", tint:"#ffd19a"}
-  ];
-  var HAIR_COLORS = ["#111318","#2a1c12","#4a2a16","#7a4a2a","#c7b18a","#c7c7c7"];
-  var HAIR_STYLES = ["坊主","ショート","七三分け","ラフ","ウェーブ","カーリー","オールバック","ミディアム"];
-  var FACE_SHAPES = ["丸顔","卵型","四角","V字"];
-  var EYES = ["おだやか","シャープ","ぱっちり","眠そう"];
-  var BROWS = ["やわらか","ストレート","角度あり","太め"];
-  var MOUTHS = ["ふつう","笑顔","にっこり","真剣"];
-  var BEARDS = ["なし","うっすら","あごひげ","フル"];
-
-  // ---------- State ----------
-  var state = load() || defaultState();
+  function load() { try { return JSON.parse(localStorage.getItem(KEY)); } catch (_) { return null; } }
+  function save() { localStorage.setItem(KEY, JSON.stringify(state)); }
+  function dateKey(d = new Date()) { return d.toISOString().slice(0, 10); }
+  function startOfWeek(now = new Date()) {
+    const d = new Date(now); const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day);
+    return d.toISOString().slice(0, 10);
+  }
+  function weekCount() {
+    const start = startOfWeek();
+    return state.progress.trainingLog.filter((d) => d >= start).length;
+  }
 
   function ensureDaily() {
-    var today = nowDateKey();
-    var p = state.progress;
-
-    if (p.lastDay === null) {
-      p.lastDay = today;
+    const p = state.progress;
+    const today = dateKey();
+    const stamp = p.lastDailyReset || '';
+    if (stamp !== today) {
       p.setsLeft = 3;
-      p.streak = 1;
+      p.fatigue = Math.max(0, Math.round(p.fatigue * 0.65));
+      p.lastDailyReset = today;
       save();
-      return;
-    }
-
-    if (p.lastDay !== today) {
-      p.lastDay = today;
-      p.setsLeft = 3;
-      p.fatigue = Math.max(0, Math.floor(p.fatigue * 0.55));
-      p.streak = p.streak + 1;
-      save();
-      toast("日付が変わったため、セット数が3に回復しました。");
     }
   }
 
-  // ---------- Root / Canvas ----------
-  var root = $("#root");
-  if (!root) {
-    // This should not happen with your index.html, but guard anyway.
-    document.body.innerHTML = "<pre style='color:#fff'>#root not found</pre>";
-    return;
+  function xpToNext(level) { return Math.round(42 + level * 10 + Math.pow(level, 1.35) * 5); }
+  function avatarStage(level) {
+    let stage = 0;
+    for (let i = 0; i < STAGE_THRESHOLDS.length; i++) if (level >= STAGE_THRESHOLDS[i]) stage = i;
+    return clamp(stage, 0, 5);
   }
 
-  var canvas = document.createElement("canvas");
-  canvas.width = 420;
-  canvas.height = 410;
-  canvas.style.width = "100%";
-  canvas.style.maxWidth = "420px";
-  canvas.style.height = "auto";
-  canvas.style.display = "block";
-  canvas.style.margin = "0 auto";
-
-  // ---------- UI helpers ----------
-  function selectField(label, key, list) {
-    var html = "<label class='fLabel'>" + escapeHtml(label) + "</label>";
-    html += "<select class='fSelect' data-select='" + key + "'>";
-    for (var i = 0; i < list.length; i++) {
-      var selected = (state.profile[key] === i) ? " selected" : "";
-      html += "<option value='" + i + "'" + selected + ">" + escapeHtml(list[i]) + "</option>";
-    }
-    html += "</select>";
-    return "<div class='fRow'>" + html + "</div>";
+  function badges() {
+    const p = state.progress;
+    const list = [];
+    if (p.streak >= 3) list.push('Consistency I');
+    if (p.streak >= 7) list.push('Consistency II');
+    if (p.streak >= 21) list.push('Consistency III');
+    if (p.totalSets >= 30) list.push('Iron Habit');
+    if (list.length === 0) list.push('Starter');
+    return list;
   }
 
-  function bindSelects() {
-    var selects = root.querySelectorAll("select[data-select]");
-    for (var i = 0; i < selects.length; i++) {
-      (function (el) {
-        el.addEventListener("change", function () {
-          var key = el.getAttribute("data-select");
-          state.profile[key] = parseInt(el.value, 10) || 0;
-          save();
-          drawAvatar(true);
-        });
-      })(selects[i]);
-    }
+  function toast(msg) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast.tm);
+    toast.tm = setTimeout(() => t.classList.remove('show'), 1500);
   }
 
-  function viewProfile() {
-    root.innerHTML = "";
-
-    var wrap = document.createElement("div");
-    wrap.style.minHeight = "100%";
-    wrap.style.display = "grid";
-    wrap.style.gridTemplateRows = "auto auto auto";
-    wrap.style.gap = "10px";
-
-    var head = document.createElement("div");
-    head.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:center;gap:8px;'>" +
-        "<div><div style='font-size:19px;font-weight:900;'>Daily Mascle</div><div style='opacity:.72;font-size:12px;'>一度確定すると見た目は固定されます</div></div>" +
-        "<span style='font-size:11px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.2);'>初期設定</span>" +
-      "</div>";
-
-    var body = document.createElement("div");
-    body.style.display = "grid";
-    body.style.gridTemplateColumns = (window.innerWidth < 820) ? "1fr" : "1fr 1fr";
-    body.style.gap = "10px";
-    body.style.minHeight = "0";
-    body.style.overflowY = "auto";
-
-    var left = document.createElement("div");
-    left.style.background = "var(--panel)";
-    left.style.border = "1px solid var(--line)";
-    left.style.borderRadius = "16px";
-    left.style.padding = "10px";
-    left.style.display = "grid";
-    left.style.gridTemplateRows = "auto auto";
-    left.innerHTML =
-      "<div><label class='fLabel'>名前</label><input id='nameInput' maxlength='12' value='" + escapeHtml(state.profile.name) + "' placeholder='例: だいち' class='fInput'></div>" +
-      "<div style='overflow:visible;padding-right:4px;display:grid;gap:8px;'>" +
-      selectField("顔", "faceShape", FACE_SHAPES) +
-      selectField("目", "eyes", EYES) +
-      selectField("眉", "brows", BROWS) +
-      selectField("口", "mouth", MOUTHS) +
-      selectField("ひげ", "beard", BEARDS) +
-      selectField("髪型", "hairStyle", HAIR_STYLES) +
-      selectField("髪色", "hairColor", ["黒","ダーク","ブラウン","ライトブラウン","ブロンド","グレー"]) +
-      selectField("肌色", "skinTone", ["トーン 1","トーン 2","トーン 3","トーン 4","トーン 5","トーン 6","トーン 7","トーン 8"]) +
-      selectField("アンダートーン", "skinUndertone", ["クール","ニュートラル","ウォーム"]) +
-      "</div>";
-
-    var right = document.createElement("div");
-    right.style.background = "var(--panel)";
-    right.style.border = "1px solid var(--line)";
-    right.style.borderRadius = "16px";
-    right.style.padding = "8px";
-    right.style.display = "flex";
-    right.style.alignItems = "center";
-    right.appendChild(canvas);
-
-    body.appendChild(left);
-    body.appendChild(right);
-
-    var foot = document.createElement("div");
-    foot.style.display = "flex";
-    foot.style.gap = "8px";
-    foot.innerHTML =
-      "<button id='btnReset' class='pBtn pBtnSub'>リセット</button>" +
-      "<button id='btnConfirmProfile' class='pBtn'>確定して開始</button>";
-
-    wrap.appendChild(head);
-    wrap.appendChild(body);
-    wrap.appendChild(foot);
-    root.appendChild(wrap);
-
-    var nameInput = $("#nameInput");
-    if (nameInput) {
-      nameInput.addEventListener("input", function (e) {
-        state.profile.name = (e.target.value || "").trim();
-        save();
-        drawAvatar(true);
-      });
-    }
-
-    bindSelects();
-    bindUtilityButtons();
-
-    var btn = $("#btnConfirmProfile");
-    if (btn) {
-      btn.addEventListener("click", function () {
-        var name = (state.profile.name || "").trim();
-        if (!name) { toast("名前を入力してください"); return; }
-        var ok = confirm("この見た目で固定しますか？");
-        if (!ok) return;
-        state.profileLocked = true;
-        state.createdAt = new Date().toISOString();
-        if (!state.progress.lastDay) state.progress.lastDay = nowDateKey();
-        save();
-        ensureDaily();
-        viewGame();
-      });
-    }
-
-    drawAvatar(true);
-  }
-
-  // ---------- Game ----------
-  var run = null;
-
-  function viewGame() {
-    ensureDaily();
-    root.innerHTML = "";
-
-    var p = state.progress;
-
-    var layout = document.createElement("div");
-    layout.style.minHeight = "100%";
-    layout.style.display = "grid";
-    layout.style.gridTemplateRows = "auto auto auto";
-    layout.style.gap = "10px";
-
-    var header = document.createElement("div");
-    header.style.background = "var(--panel)";
-    header.style.border = "1px solid var(--line)";
-    header.style.borderRadius = "14px";
-    header.style.padding = "10px";
-    header.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>" +
-      "<div><div style='font-weight:900;font-size:18px;'>" + escapeHtml(state.profile.name) + "</div><div style='font-size:12px;opacity:.75;'>Lv." + p.level + " / 経験値 " + p.xp + " / 連続 " + p.streak + "日</div></div>" +
-      "<div style='display:grid;gap:4px;text-align:right;font-size:12px;'><b>残りセット " + p.setsLeft + "/3</b><span style='opacity:.75;'>疲労 " + p.fatigue + "</span></div>" +
-      "</div>" +
-      "<div style='margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px;'>" +
-      "<div class='mini'>胸<br><b>" + p.chest.toFixed(1) + "</b></div><div class='mini'>肩<br><b>" + p.shoulders.toFixed(1) + "</b></div><div class='mini'>腕<br><b>" + p.arms.toFixed(1) + "</b></div>" +
-      "</div>";
-
-    var middle = document.createElement("div");
-    middle.style.display = "grid";
-    middle.style.gridTemplateColumns = (window.innerWidth < 820) ? "1fr" : "1.05fr 1fr";
-    middle.style.gap = "10px";
-    middle.style.minHeight = "0";
-    middle.style.overflowY = "auto";
-
-    var avatarCard = document.createElement("div");
-    avatarCard.style.background = "var(--panel)";
-    avatarCard.style.border = "1px solid var(--line)";
-    avatarCard.style.borderRadius = "14px";
-    avatarCard.style.padding = "8px";
-    avatarCard.style.display = "flex";
-    avatarCard.style.alignItems = "center";
-    avatarCard.appendChild(canvas);
-
-    var gameCard = document.createElement("div");
-    gameCard.style.background = "var(--panel)";
-    gameCard.style.border = "1px solid var(--line)";
-    gameCard.style.borderRadius = "14px";
-    gameCard.style.padding = "10px";
-    gameCard.style.display = "grid";
-    gameCard.style.gridTemplateRows = "auto auto auto";
-    gameCard.innerHTML =
-      "<div><b>ベンチプレス</b><div style='font-size:12px;opacity:.75;'>フォーム+タイミングで成長先が変化</div></div>" +
-      "<div id='stage' style='overflow:auto;max-height:42svh'></div>" +
-      "<button id='btnStart' class='pBtn'>セット開始</button>";
-
-    middle.appendChild(avatarCard);
-    middle.appendChild(gameCard);
-
-    var foot = document.createElement("div");
-    foot.style.display = "flex";
-    foot.style.gap = "8px";
-    foot.innerHTML = "<button id='btnExport' class='pBtn pBtnSub'>エクスポート</button><button id='btnReset' class='pBtn pBtnSub'>リセット</button>";
-
-    layout.appendChild(header);
-    layout.appendChild(middle);
-    layout.appendChild(foot);
-    root.appendChild(layout);
-
-    var btnStart = $("#btnStart");
-    if (btnStart) btnStart.addEventListener("click", startSet);
-
-    drawAvatar(false);
-    renderStageIdle();
-    bindUtilityButtons();
-  }
-
-  function renderStageIdle() {
-    var stage = $("#stage");
-    if (!stage) return;
-    var p = state.progress;
-
-    stage.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>" +
-        "<span style='font-size:12px;font-weight:900;opacity:.9;border:1px solid rgba(255,255,255,0.12);padding:6px 10px;border-radius:999px;'>準備完了</span>" +
-        "<span style='opacity:.7;font-size:12px;font-weight:700;'>今日の残りセット: <b>" + p.setsLeft + "</b></span>" +
-      "</div>" +
-      "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='opacity:.7;font-size:12px;font-weight:700;'>最初に3秒間フォームを調整し、その後10回のタイミング操作を行います。</div>";
-
-    var btn = $("#btnStart");
-    if (!btn) return;
-    btn.disabled = (p.setsLeft <= 0);
-    btn.textContent = (p.setsLeft <= 0) ? "今日はこれ以上できません" : "セット開始";
-  }
-
-  function startSet() {
-    var p = state.progress;
-    if (p.setsLeft <= 0) { toast("今日は残りセットがありません。"); return; }
-
-    run = {
-      phase: "form",
-      form: 60,
-      formTimeLeft: 3.0,
-      repsTotal: 10,
-      repIndex: 0,
-      hits: 0,
-      repAcc: 0,
-      formAcc: 0,
-      leakTarget: null,
-      lastTick: performance.now(),
-      barX: 0.15,
-      barV: 0.9,
-      zoneA: 0.46,
-      zoneB: 0.58
-    };
-
-    renderFormPhase();
-    requestAnimationFrame(loop);
-    toast("フォーム調整フェーズ開始");
-  }
-
-  function renderFormPhase() {
-    var stage = $("#stage");
-    if (!stage) return;
-
-    stage.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>" +
-        "<span style='font-size:12px;font-weight:900;opacity:.9;background:rgba(255,200,0,0.12);border:1px solid rgba(255,200,0,0.25);padding:6px 10px;border-radius:999px;'>フォーム調整 (3秒)</span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>目標: <b>55–70</b></span>" +
-      "</div>" +
-      "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='opacity:.7;font-size:12px;font-weight:700;'>スライダーで肘の開きを調整し、目標範囲を維持しましょう。</div>" +
-      "<div style='margin:10px 0;'>" +
-        "<input id='formSlider' type='range' min='0' max='100' value='" + run.form + "' style='width:100%;'>" +
-      "</div>" +
-      "<div style='display:flex;gap:8px;flex-wrap:wrap;'>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>フォーム値: <b id='formVal'>" + run.form + "</b></span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>残り時間: <b id='formTime'>" + run.formTimeLeft.toFixed(1) + "s</b></span>" +
-      "</div>";
-
-    var slider = $("#formSlider");
-    if (slider) {
-      slider.addEventListener("input", function (e) {
-        run.form = parseInt(e.target.value, 10);
-        var fv = $("#formVal");
-        if (fv) fv.textContent = String(run.form);
-      });
-    }
-
-    var btn = $("#btnStart");
-    if (btn) { btn.disabled = true; btn.textContent = "セット中..."; }
-  }
-
-  function renderRepPhase() {
-    var stage = $("#stage");
-    if (!stage) return;
-
-    stage.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>" +
-        "<span style='font-size:12px;font-weight:900;opacity:.9;background:rgba(134,239,172,0.12);border:1px solid rgba(134,239,172,0.25);padding:6px 10px;border-radius:999px;'>レップ (10回)</span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>緑ゾーンでタップ</span>" +
-      "</div>" +
-      "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='opacity:.7;font-size:12px;font-weight:700;'>マーカーがゾーンに入ったらタップ。パネル内どこでもタップできます。</div>" +
-      "<div style='margin-top:10px;'>" +
-        "<canvas id='repCanvas' width='900' height='180' style='width:100%;height:auto;border-radius:14px;'></canvas>" +
-      "</div>" +
-      "<div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;'>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>回数: <b id='repIdx'>" + (run.repIndex + 1) + "</b>/" + run.repsTotal + "</span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>成功: <b id='hits'>" + run.hits + "</b></span>" +
-      "</div>" +
-      "<div style='margin-top:10px;display:flex;justify-content:flex-end;'>" +
-        "<button id='tapBtn' style='padding:12px 14px;border-radius:12px;border:1px solid rgba(125,211,252,0.35);background:rgba(125,211,252,0.16);color:#fff;font-weight:900;'>タップ</button>" +
-      "</div>";
-
-    var tapBtn = $("#tapBtn");
-    if (tapBtn) tapBtn.addEventListener("click", handleTap);
-    stage.addEventListener("click", function (e) {
-      if (e && e.target && e.target.id === "tapBtn") return;
-      handleTap();
+  function confirmModal(title, message) {
+    const dialog = $('#appModal');
+    $('#modalTitle').textContent = title;
+    $('#modalMessage').textContent = message;
+    dialog.showModal();
+    return new Promise((resolve) => {
+      dialog.addEventListener('close', () => resolve(dialog.returnValue === 'ok'), { once: true });
     });
   }
 
-  function renderResult(result) {
-    var stage = $("#stage");
-    if (!stage) return;
+  function transitionRender(html) {
+    const main = $('#mainContent');
+    main.innerHTML = html;
+    main.classList.remove('fade-slide');
+    requestAnimationFrame(() => main.classList.add('fade-slide'));
+    setHeader();
+    bindFooter();
+  }
 
-    stage.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>" +
-        "<span style='font-size:12px;font-weight:900;opacity:.9;border:1px solid rgba(255,255,255,0.12);padding:6px 10px;border-radius:999px;'>結果</span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>" +
-          "フォーム精度 <b>" + Math.round(result.formAcc * 100) + "%</b> ・ タイミング精度 <b>" + Math.round(result.repAcc * 100) + "%</b>" +
-        "</span>" +
-      "</div>" +
-      "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='display:flex;gap:8px;flex-wrap:wrap;'>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>胸 <b>+" + result.gains.chest.toFixed(2) + "</b></span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>肩 <b>+" + result.gains.shoulders.toFixed(2) + "</b></span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>腕 <b>+" + result.gains.arms.toFixed(2) + "</b></span>" +
-      "</div>" +
-      "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='opacity:.7;font-size:12px;font-weight:700;'>" + escapeHtml(result.note) + "</div>" +
-      "<div style='margin-top:12px;display:flex;justify-content:flex-end;'>" +
-        "<button id='btnDone' style='padding:12px 14px;border-radius:12px;border:1px solid rgba(125,211,252,0.35);background:rgba(125,211,252,0.16);color:#fff;font-weight:900;'>閉じる</button>" +
-      "</div>";
+  function setHeader() {
+    $('#headerLevelPill').textContent = `Lv.${state.progress.level}`;
+  }
 
-    var btnDone = $("#btnDone");
-    if (btnDone) {
-      btnDone.addEventListener("click", function () {
-        run = null;
-        var bs = $("#btnStart");
-        if (bs) bs.disabled = false;
-        viewGame();
-        toast("保存しました。");
-      });
+  function setAvatarLevel(level, animate) {
+    const stage = avatarStage(level);
+    const img = $('#avatarImage');
+    if (!img) return;
+    img.src = `./assets/avatar/stage-${stage}.svg`;
+    img.alt = `Avatar Stage ${stage}`;
+    $('#avatarStage').textContent = `見た目段階: ${stage}/5`;
+    if (animate) {
+      const wrap = $('.avatar-wrap');
+      wrap.classList.add('levelup');
+      setTimeout(() => wrap.classList.remove('levelup'), 220);
     }
+  }
+
+  function profileView() {
+    $('#primaryAction').textContent = 'この見た目で開始';
+    $('#secondaryAction').style.display = 'none';
+    $('#tertiaryAction').style.display = 'none';
+    transitionRender(`
+      <section class="section-card avatar-wrap">
+        <img id="avatarImage" src="./assets/avatar/stage-0.svg" alt="avatar" />
+        <p id="avatarStage" class="eyebrow"></p>
+      </section>
+      <section class="section-card form-grid">
+        <div><label>プレイヤー名</label><input id="nameInput" maxlength="12" placeholder="例: だいち" value="${state.profile.name || ''}"></div>
+        <div><label>髪型</label><select id="hairSelect"><option value="0">ショート</option><option value="1">ミディアム</option><option value="2">カーリー</option></select></div>
+        <div><label>肌トーン</label><select id="toneSelect"><option value="1">ライト</option><option value="2">ナチュラル</option><option value="3">タン</option></select></div>
+      </section>
+    `);
+    setAvatarLevel(state.progress.level);
+  }
+
+  function gameView() {
+    ensureDaily();
+    const p = state.progress;
+    const next = xpToNext(p.level);
+    const dailyDone = p.dailyGoalDoneDate === dateKey();
+    transitionRender(`
+      <section class="section-card avatar-wrap">
+        <img id="avatarImage" src="./assets/avatar/stage-0.svg" alt="avatar" />
+        <div class="avatar-meta"><span>${state.profile.name}</span><span id="avatarStage"></span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${(p.xp/next)*100}%"></div></div>
+        <div class="avatar-meta"><span>XP ${p.xp} / ${next}</span><span>次Lvまで ${next - p.xp}</span></div>
+      </section>
+      <section class="section-card">
+        <div class="stats-grid">
+          <div class="stat"><div class="label">連続日数</div><div class="value">${p.streak}</div></div>
+          <div class="stat"><div class="label">今週達成</div><div class="value">${weekCount()}回</div></div>
+          <div class="stat"><div class="label">今日の目標</div><div class="value">${dailyDone ? '達成' : '未達成'}</div></div>
+        </div>
+        <div class="badges">${badges().map((b) => `<span class="badge">${b}</span>`).join('')}</div>
+      </section>
+      <section class="section-card">
+        <p class="eyebrow">ベンチプレスミニゲーム（フォーム3秒 + 10タップ）</p>
+        <div id="stageArea"></div>
+      </section>
+    `);
+    setAvatarLevel(p.level);
+    renderIdleStage();
+    $('#secondaryAction').style.display = 'block';
+    $('#tertiaryAction').style.display = 'block';
+    $('#primaryAction').textContent = p.setsLeft > 0 ? `セット開始（残り${p.setsLeft}）` : '今日は終了';
+    $('#primaryAction').disabled = p.setsLeft <= 0;
+  }
+
+  function renderIdleStage() {
+    $('#stageArea').innerHTML = `<p>フォームを適正ゾーンに合わせ、タイミングバーで10回タップ。</p>`;
+  }
+
+  function startSet() {
+    if (state.progress.setsLeft <= 0) return;
+    run = {
+      phase: 'form',
+      form: 60, formTimeLeft: 3,
+      repsTotal: 10, repIndex: 0, hits: 0,
+      barX: 0.15, barV: 1.15, zoneA: 0.46, zoneB: 0.58,
+      lastTick: performance.now(), formAcc: 0, repAcc: 0
+    };
+    $('#stageArea').innerHTML = `<p>フォーム調整: <b id="formTime">3.0s</b> / 値 <b id="formValue">60</b></p>
+      <input type="range" id="formRange" min="0" max="100" value="60">
+      <canvas id="repCanvas" width="360" height="120"></canvas>
+      <p class="eyebrow">次フェーズでバーが表示されます</p>`;
+    $('#formRange').addEventListener('input', (e) => {
+      run.form = parseInt(e.target.value, 10) || 0;
+      $('#formValue').textContent = String(run.form);
+    });
+    requestAnimationFrame(loop);
   }
 
   function loop(t) {
     if (!run) return;
-    var dt = (t - run.lastTick) / 1000;
+    const dt = (t - run.lastTick) / 1000;
     run.lastTick = t;
-
-    if (run.phase === "form") {
+    if (run.phase === 'form') {
       run.formTimeLeft -= dt;
-      var ft = $("#formTime");
-      if (ft) ft.textContent = (Math.max(0, run.formTimeLeft)).toFixed(1) + "s";
-
-      drawAvatar(true);
-
+      $('#formTime').textContent = `${Math.max(0, run.formTimeLeft).toFixed(1)}s`;
       if (run.formTimeLeft <= 0) {
-        var v = run.form;
-        var targetA = 55, targetB = 70;
-        var acc;
-        if (v >= targetA && v <= targetB) {
-          var center = (targetA + targetB) / 2;
-          var dist = Math.abs(v - center) / ((targetB - targetA) / 2);
-          acc = 1.0 - 0.10 * dist;
-        } else {
-          var dist2 = (v < targetA) ? (targetA - v) : (v - targetB);
-          acc = clamp(0.85 - (dist2 / 40), 0.15, 0.85);
-        }
-        run.formAcc = clamp(acc, 0, 1);
-
-        run.phase = "reps";
-        run.repIndex = 0;
-        run.hits = 0;
-        run.barX = 0.08;
-        run.barV = 1.15 + (Math.random() * 0.15);
-        run.zoneA = 0.46;
-        run.zoneB = 0.58;
-        renderRepPhase();
+        const v = run.form;
+        run.formAcc = (v >= 55 && v <= 70) ? 0.95 : clamp(0.85 - Math.abs(v - 62) / 70, 0.2, 0.85);
+        run.phase = 'reps';
+        $('#stageArea').innerHTML = `<p>タイミングでタップ <b id="repInfo">1/10</b> 命中 <b id="hitInfo">0</b></p>
+          <canvas id="repCanvas" width="360" height="140"></canvas>
+          <button id="tapBtn" class="btn btn-primary" type="button">タップ</button>`;
+        $('#tapBtn').addEventListener('click', tapRep);
       }
-    } else if (run.phase === "reps") {
+    } else if (run.phase === 'reps') {
       run.barX += run.barV * dt;
-      if (run.barX > 1.0) { run.barX = 1.0; run.barV *= -1; }
-      if (run.barX < 0.0) { run.barX = 0.0; run.barV *= -1; }
+      if (run.barX >= 1 || run.barX <= 0) run.barV *= -1;
       drawRepBar();
     }
-
     requestAnimationFrame(loop);
   }
 
-  function handleTap() {
-    if (!run || run.phase !== "reps") return;
+  function drawRepBar() {
+    const c = $('#repCanvas'); if (!c || !run) return;
+    const ctx = c.getContext('2d');
+    const { width:w, height:h } = c;
+    ctx.clearRect(0,0,w,h);
+    const bx=24, by=58, bw=w-48, bh=24;
+    ctx.fillStyle='#16233d'; ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='#263a61'; ctx.fillRect(bx,by,bw,bh);
+    ctx.fillStyle='rgba(112,247,183,.75)'; ctx.fillRect(bx + bw*run.zoneA, by, bw*(run.zoneB-run.zoneA), bh);
+    ctx.fillStyle='#5fd1ff'; ctx.fillRect(bx + bw*run.barX - 9, by-12, 18, bh+24);
+  }
 
-    var inZone = (run.barX >= run.zoneA && run.barX <= run.zoneB);
-    if (inZone) {
-      run.hits++;
-      toast("ナイス！");
-    } else {
-      toast("ミス");
-    }
-
+  function tapRep() {
+    if (!run || run.phase !== 'reps') return;
+    const hit = run.barX >= run.zoneA && run.barX <= run.zoneB;
+    if (hit) run.hits++;
     run.repIndex++;
-
-    var repIdx = $("#repIdx");
-    var hitsEl = $("#hits");
-    if (repIdx) repIdx.textContent = String(Math.min(run.repIndex + 1, run.repsTotal));
-    if (hitsEl) hitsEl.textContent = String(run.hits);
-
-    var drift = (Math.random() * 0.04 - 0.02);
-    run.zoneA = clamp(run.zoneA + drift, 0.20, 0.70);
-    run.zoneB = clamp(run.zoneA + 0.12, run.zoneA + 0.08, 0.92);
-
+    $('#repInfo').textContent = `${Math.min(run.repIndex + 1, run.repsTotal)}/10`;
+    $('#hitInfo').textContent = String(run.hits);
+    run.zoneA = clamp(run.zoneA + (Math.random() * 0.05 - 0.025), 0.2, 0.7);
+    run.zoneB = run.zoneA + 0.12;
     if (run.repIndex >= run.repsTotal) {
-      run.repAcc = clamp(run.hits / run.repsTotal, 0, 1);
-      var result = applyGains(run.formAcc, run.repAcc, run.form);
-      run.phase = "result";
-      drawAvatar(false);
-      renderResult(result);
-
-      var btn = $("#btnStart");
-      if (btn) btn.disabled = false;
+      run.repAcc = run.hits / run.repsTotal;
+      const leveled = applyGains(run.formAcc, run.repAcc, run.form);
+      run = null;
+      gameView();
+      if (leveled) setAvatarLevel(state.progress.level, true);
     }
   }
 
-  function xpToNext(level) { return 60 + (level - 1) * 22; }
-
   function applyGains(formAcc, repAcc, formVal) {
-    var p = state.progress;
+    const p = state.progress;
+    const beforeLevel = p.level;
+    const fatigueFactor = clamp(1 - p.fatigue / 160, 0.55, 1);
+    const base = 1.2 * fatigueFactor;
+    const target = base * (0.45 + 0.55 * repAcc) * (0.45 + 0.55 * formAcc);
+    const leak = base * (1 - formAcc) * (0.5 + 0.5 * (1 - repAcc));
 
-    var fatigueFactor = clamp(1.0 - (p.fatigue / 120), 0.55, 1.0);
-    var levelFactor = 1.0 + (p.level - 1) * 0.04;
-    var base = 1.25 * levelFactor * fatigueFactor;
+    p.chest += target;
+    if (formVal < 45) p.arms += leak; else if (formVal > 75) p.shoulders += leak; else { p.shoulders += leak * 0.55; p.arms += leak * 0.45; }
 
-    var target = base * (0.40 + 0.60 * repAcc) * (0.40 + 0.60 * formAcc);
-    var leakAmt = base * (1 - formAcc) * (0.50 + 0.50 * (1 - repAcc));
-
-    var gainChest = target;
-    var gainShoulders = 0, gainArms = 0;
-
-    if (formVal < 45) gainArms += leakAmt;
-    else if (formVal > 75) gainShoulders += leakAmt;
-    else { gainShoulders += leakAmt * 0.55; gainArms += leakAmt * 0.45; }
-
-    var fatigueUp = Math.round(10 + (1 - repAcc) * 10 + (1 - formAcc) * 8);
-    p.fatigue = clamp(p.fatigue + fatigueUp, 0, 140);
-
-    var xpGain = Math.round(14 + 18 * repAcc + 16 * formAcc);
+    const streakBonus = clamp(p.streak * 0.5, 0, 8);
+    const xpGain = Math.round(18 + 16 * repAcc + 14 * formAcc + streakBonus);
     p.xp += xpGain;
     while (p.xp >= xpToNext(p.level)) {
       p.xp -= xpToNext(p.level);
       p.level++;
-      toast("レベルアップ！ Lv." + p.level);
     }
 
-    p.chest += gainChest;
-    p.shoulders += gainShoulders;
-    p.arms += gainArms;
-
+    p.fatigue = clamp(p.fatigue + Math.round(9 + (1-repAcc)*8 + (1-formAcc)*8), 0, 150);
     p.setsLeft = Math.max(0, p.setsLeft - 1);
     p.totalSets += 1;
 
+    const today = dateKey();
+    if (p.lastTrainingDate !== today) {
+      const y = new Date(); y.setDate(y.getDate() - 1);
+      const yesterday = dateKey(y);
+      p.streak = (p.lastTrainingDate === yesterday) ? p.streak + 1 : 1;
+      p.lastTrainingDate = today;
+      p.trainingLog.push(today);
+      p.trainingLog = [...new Set(p.trainingLog)].slice(-180);
+    }
+    p.dailyGoalDoneDate = today;
+
     save();
+    toast(beforeLevel !== p.level ? `レベルアップ！ Lv.${p.level}` : `+${xpGain} XP 獲得`);
+    return beforeLevel !== p.level;
+  }
 
-    var note = "フォームが安定し、狙った部位をしっかり鍛えられました。";
-    if (formVal < 45) note = "フォームが狭すぎて、腕に負荷が逃げました。";
-    else if (formVal > 75) note = "フォームが広すぎて、肩に負荷が逃げました。";
+  function bindFooter() {
+    $('#primaryAction').onclick = async () => {
+      if (!state.profileLocked) {
+        state.profile.name = ($('#nameInput')?.value || '').trim();
+        state.profile.hair = parseInt($('#hairSelect')?.value || '0', 10);
+        state.profile.tone = parseInt($('#toneSelect')?.value || '2', 10);
+        if (!state.profile.name) return toast('名前を入力してください');
+        const ok = await confirmModal('開始しますか？', 'この見た目を確定してゲームを始めます。');
+        if (!ok) return;
+        state.profileLocked = true;
+        save();
+        gameView();
+      } else {
+        startSet();
+      }
+    };
 
-    return {
-      formAcc: formAcc,
-      repAcc: repAcc,
-      gains: { chest: gainChest, shoulders: gainShoulders, arms: gainArms },
-      note: note
+    $('#secondaryAction').onclick = () => {
+      const data = JSON.stringify(state, null, 2);
+      navigator.clipboard?.writeText(data).then(() => toast('データをコピーしました')).catch(() => prompt('コピーしてください', data));
+    };
+
+    $('#tertiaryAction').onclick = async () => {
+      const ok = await confirmModal('リセットしますか？', '全データを初期化します。');
+      if (!ok) return;
+      localStorage.removeItem(KEY);
+      Object.assign(state, defaultState());
+      save();
+      profileView();
+      toast('リセットしました');
     };
   }
 
-  // ---------- Drawing helpers ----------
-  function roundedRect(ctx, x, y, w, h, r) {
-    r = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
+  function registerSW() {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(() => {});
   }
 
-  function capsule(ctx, x, y, r, h) {
-    roundedRect(ctx, x - r, y, r * 2, h, 999);
-    ctx.fill();
-  }
-
-  function hexToRgb(hex) {
-    var h = String(hex || "").replace("#", "").trim();
-    var full = (h.length === 3) ? (h[0]+h[0]+h[1]+h[1]+h[2]+h[2]) : h;
-    var n = parseInt(full, 16);
-    return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
-  }
-
-  function rgbToHex(rgb) {
-    function to2(v) { var s = (v|0).toString(16); return (s.length === 1) ? ("0"+s) : s; }
-    return "#" + to2(rgb.r) + to2(rgb.g) + to2(rgb.b);
-  }
-
-  function mixColor(a, b, t) {
-    var A = hexToRgb(a), B = hexToRgb(b);
-    return rgbToHex({ r: Math.round(lerp(A.r, B.r, t)), g: Math.round(lerp(A.g, B.g, t)), b: Math.round(lerp(A.b, B.b, t)) });
-  }
-
-  function darkenColor(c, amt) {
-    var A = hexToRgb(c);
-    return rgbToHex({ r: Math.round(A.r * (1 - amt)), g: Math.round(A.g * (1 - amt)), b: Math.round(A.b * (1 - amt)) });
-  }
-
-  function drawFaceFeatures(ctx, x, y, faceW, faceH) {
-    var brow = state.profile.brows;
-    var eye = state.profile.eyes;
-    var mouth = state.profile.mouth;
-    var beard = state.profile.beard;
-    var hairC = HAIR_COLORS[state.profile.hairColor];
-
-    var browY = y - faceH * 0.15;
-    var eyeY = y - faceH * 0.05;
-    var spacing = faceW * 0.2;
-
-    // brows (Mii-like bold simple lines)
-    ctx.strokeStyle = "#1e1f28";
-    ctx.lineCap = "round";
-    ctx.lineWidth = 4.5;
-    for (var i = -1; i <= 1; i += 2) {
-      var bx = x + i * spacing;
-      ctx.beginPath();
-      if (brow === 0) { ctx.moveTo(bx - i * 16, browY + 1); ctx.lineTo(bx + i * 16, browY - 1); }
-      if (brow === 1) { ctx.moveTo(bx - i * 16, browY - 2); ctx.lineTo(bx + i * 16, browY - 2); }
-      if (brow === 2) { ctx.moveTo(bx - i * 16, browY + 4); ctx.lineTo(bx + i * 16, browY - 5); }
-      if (brow === 3) { ctx.lineWidth = 6; ctx.moveTo(bx - i * 18, browY + 2); ctx.lineTo(bx + i * 18, browY - 2); ctx.lineWidth = 4.5; }
-      ctx.stroke();
-    }
-
-    // eyes (black ovals)
-    ctx.fillStyle = "#1f2433";
-    for (var j = -1; j <= 1; j += 2) {
-      var ex = x + j * spacing;
-      var rx = eye === 2 ? 8 : 7;
-      var ry = eye === 3 ? 4 : 5;
-      ctx.beginPath();
-      if (eye === 1) ctx.ellipse(ex, eyeY, rx + 1, ry, j * 0.25, 0, Math.PI * 2);
-      else ctx.ellipse(ex, eyeY, rx, ry, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // simple nose
-    ctx.strokeStyle = "#2b2f3f";
-    ctx.lineWidth = 2.8;
-    ctx.beginPath();
-    ctx.moveTo(x + 2, y - 2);
-    ctx.lineTo(x + 2, y + 16);
-    ctx.quadraticCurveTo(x + 1, y + 20, x - 5, y + 20);
-    ctx.stroke();
-
-    // mouth
-    var my = y + faceH * 0.20;
-    ctx.strokeStyle = "#2f3038";
-    ctx.lineWidth = 3.2;
-    ctx.beginPath();
-    if (mouth === 0) { ctx.moveTo(x - 14, my); ctx.lineTo(x + 14, my); }
-    if (mouth === 1) { ctx.moveTo(x - 14, my - 2); ctx.quadraticCurveTo(x, my + 7, x + 14, my - 2); }
-    if (mouth === 2) { ctx.moveTo(x - 14, my - 4); ctx.quadraticCurveTo(x, my + 10, x + 14, my - 4); }
-    if (mouth === 3) { ctx.moveTo(x - 14, my + 3); ctx.quadraticCurveTo(x, my - 6, x + 14, my + 3); }
-    ctx.stroke();
-
-    // subtle blush dots
-    ctx.fillStyle = "rgba(255,120,140,0.18)";
-    ctx.beginPath();
-    ctx.ellipse(x - spacing - 8, y + faceH * 0.08, 8, 4, 0, 0, Math.PI * 2);
-    ctx.ellipse(x + spacing + 8, y + faceH * 0.08, 8, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    if (beard !== 0) {
-      ctx.fillStyle = mixColor(hairC, "#000", 0.15);
-      ctx.globalAlpha = 0.22;
-      roundedRect(ctx, x - faceW * 0.19, y + faceH * 0.20, faceW * 0.38, beard === 2 ? 18 : 30, 16);
-      ctx.fill();
-      if (beard === 3) {
-        roundedRect(ctx, x - faceW * 0.30, y + faceH * 0.12, faceW * 0.60, 48, 20);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-  }
-
-  function drawHair(ctx, x, y, faceW, faceH, styleIndex, color) {
-    var top = y - faceH * 0.58;
-    var left = x - faceW * 0.58;
-    var hw = faceW * 1.16;
-    var hh = faceH * 0.58;
-
-    // base cap
-    var grad = ctx.createLinearGradient(0, top, 0, top + hh);
-    grad.addColorStop(0, mixColor(color, "#ffffff", 0.10));
-    grad.addColorStop(1, mixColor(color, "#000000", 0.25));
-    ctx.fillStyle = grad;
-    roundedRect(ctx, left, top, hw, hh, 46);
-    ctx.fill();
-
-    // style spikes/bangs
-    ctx.fillStyle = mixColor(color, "#000000", 0.18);
-    ctx.beginPath();
-    var spikes = 6 + (styleIndex % 3);
-    for (var i = 0; i < spikes; i++) {
-      var px = left + 10 + i * (hw - 20) / (spikes - 1);
-      var deep = (i % 2 === 0 ? 16 : 8) + (styleIndex === 5 ? 8 : 0);
-      ctx.moveTo(px - 8, y - faceH * 0.19);
-      ctx.lineTo(px, y - faceH * 0.19 + deep);
-      ctx.lineTo(px + 8, y - faceH * 0.19);
-    }
-    ctx.fill();
-
-    // side part/slick accents
-    if (styleIndex === 2 || styleIndex === 6) {
-      ctx.strokeStyle = "rgba(255,255,255,0.35)";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x + 12, top + 12);
-      ctx.lineTo(x + 20, top + hh - 10);
-      ctx.stroke();
-    }
-  }
-
-  function drawAvatar(isPreview) {
-    var ctx = canvas.getContext("2d");
-    var w = canvas.width, h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
-
-    // neutral light background like Mii editor
-    ctx.fillStyle = "#e6e6e6";
-    ctx.fillRect(0, 0, w, h);
-
-    var p = state.progress;
-    var chest = isPreview ? Math.min(p.chest, 14) : p.chest;
-    var shoulders = isPreview ? Math.min(p.shoulders, 14) : p.shoulders;
-    var arms = isPreview ? Math.min(p.arms, 14) : p.arms;
-
-    function g(x) { return 1 - Math.exp(-x / 48); }
-    var gC = g(chest), gS = g(shoulders), gA = g(arms);
-
-    var cx = w * 0.5;
-    var headY = h * 0.23;
-
-    var skinBase = SKIN_BASE[state.profile.skinTone] || SKIN_BASE[3];
-    var tint = UNDERTONE[state.profile.skinUndertone].tint;
-    var skin = mixColor(skinBase, tint, 0.08);
-    var skinShadow = darkenColor(skin, 0.12);
-
-    // Mii-like proportion: big head, compact torso, slim legs
-    var headW = 146;
-    var headH = 158;
-    var faceShape = state.profile.faceShape;
-    var roundness = [64, 56, 44, 38][faceShape] || 56;
-
-    var neckY = headY + headH * 0.50;
-    var shoulderW = 90 + 52 * gS;
-    var torsoW = 66 + 44 * gC;
-    var torsoH = 96;
-    var armW = 12 + 10 * gA;
-    var legW = 16 + 4 * gA;
-    var legH = 98;
-
-    // neck
-    ctx.fillStyle = skinShadow;
-    roundedRect(ctx, cx - 13, neckY - 4, 26, 18, 10);
-    ctx.fill();
-
-    // shirt (example-like red)
-    var shirtGrad = ctx.createLinearGradient(cx - torsoW, neckY + 18, cx + torsoW, neckY + 18);
-    shirtGrad.addColorStop(0, "#f34b3f");
-    shirtGrad.addColorStop(0.5, "#ff5d4e");
-    shirtGrad.addColorStop(1, "#f14639");
-
-    ctx.fillStyle = shirtGrad;
-    roundedRect(ctx, cx - shoulderW / 2, neckY + 12, shoulderW, torsoH * 0.45, 18);
-    ctx.fill();
-    roundedRect(ctx, cx - torsoW / 2, neckY + 30, torsoW, torsoH, 20);
-    ctx.fill();
-
-    // arms + hands
-    ctx.fillStyle = shirtGrad;
-    roundedRect(ctx, cx - shoulderW / 2 - armW + 5, neckY + 28, armW, 86, 12);
-    roundedRect(ctx, cx + shoulderW / 2 - 5, neckY + 28, armW, 86, 12);
-    ctx.fill();
-
-    ctx.fillStyle = skin;
-    ctx.beginPath();
-    ctx.arc(cx - shoulderW / 2 - armW / 2 + 5, neckY + 114, 10, 0, Math.PI * 2);
-    ctx.arc(cx + shoulderW / 2 + armW / 2 - 5, neckY + 114, 10, 0, Math.PI * 2);
-    ctx.fill();
-
-    // pants
-    var pantsGrad = ctx.createLinearGradient(0, neckY + 110, 0, h);
-    pantsGrad.addColorStop(0, "#505665");
-    pantsGrad.addColorStop(1, "#2b3040");
-    ctx.fillStyle = pantsGrad;
-    roundedRect(ctx, cx - torsoW * 0.46, neckY + 120, torsoW * 0.92, 34, 12);
-    ctx.fill();
-
-    // legs + shoes
-    ctx.fillStyle = pantsGrad;
-    roundedRect(ctx, cx - 6 - legW, neckY + 148, legW, legH, 12);
-    roundedRect(ctx, cx + 6, neckY + 148, legW, legH, 12);
-    ctx.fill();
-
-    ctx.fillStyle = "#3a3f4f";
-    roundedRect(ctx, cx - 8 - legW, neckY + 238, legW + 6, 14, 8);
-    roundedRect(ctx, cx + 2, neckY + 238, legW + 6, 14, 8);
-    ctx.fill();
-
-    // head
-    ctx.fillStyle = skin;
-    roundedRect(ctx, cx - headW / 2, headY - headH / 2, headW, headH, roundness);
-    ctx.fill();
-
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = skinShadow;
-    roundedRect(ctx, cx - headW / 2 + 10, headY - headH / 2 + 12, headW - 20, headH - 18, roundness - 8);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    drawHair(ctx, cx, headY, headW, headH, state.profile.hairStyle, HAIR_COLORS[state.profile.hairColor]);
-    drawFaceFeatures(ctx, cx, headY + 4, headW, headH);
-
-    // shadow + name
-    ctx.globalAlpha = 0.20;
-    ctx.fillStyle = "#666";
-    ctx.beginPath();
-    ctx.ellipse(cx, h - 18, 58, 9, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    ctx.fillStyle = "rgba(40,40,50,0.85)";
-    ctx.font = "800 15px -apple-system,system-ui";
-    var nm = (state.profile.name || (isPreview ? "プレビュー" : "プレイヤー")).slice(0, 12);
-    ctx.fillText(nm, 14, 24);
-  }
-
-  function drawRepBar() {
-    var c = $("#repCanvas");
-    if (!c || !run) return;
-    var ctx = c.getContext("2d");
-    var w = c.width, h = c.height;
-    ctx.clearRect(0, 0, w, h);
-
-    ctx.fillStyle = "#0f1018";
-    ctx.fillRect(0, 0, w, h);
-
-    var bx = w * 0.08, by = h * 0.48, bw = w * 0.84, bh = 26;
-
-    ctx.fillStyle = "#22243a";
-    roundedRect(ctx, bx, by, bw, bh, 999);
-    ctx.fill();
-
-    var zx = bx + bw * run.zoneA;
-    var zw = bw * (run.zoneB - run.zoneA);
-    ctx.fillStyle = "rgba(134,239,172,0.55)";
-    roundedRect(ctx, zx, by, zw, bh, 999);
-    ctx.fill();
-
-    var mx = bx + bw * run.barX;
-    ctx.fillStyle = "rgba(125,211,252,0.95)";
-    roundedRect(ctx, mx - 10, by - 14, 20, bh + 28, 10);
-    ctx.fill();
-
-    ctx.fillStyle = "rgba(231,231,234,0.75)";
-    ctx.font = "700 20px -apple-system,system-ui";
-    ctx.fillText("ゾーン内でタップ", bx, 36);
-  }
-
-  // ---------- Reset / Export ----------
-  var resetStep = 0;
-
-  function bindUtilityButtons() {
-    var btnReset = $("#btnReset");
-    if (btnReset && !btnReset._bound) {
-      btnReset._bound = true;
-      btnReset.addEventListener("click", function () {
-        if (resetStep === 0) {
-          resetStep = 1;
-          toast("もう一度リセットで初期化");
-          setTimeout(function () { resetStep = 0; }, 2500);
-          return;
-        }
-        var ok = confirm("すべてのデータを削除しますか？");
-        if (!ok) { resetStep = 0; return; }
-        localStorage.removeItem(KEY);
-        state = defaultState();
-        resetStep = 0;
-        toast("初期化しました");
-        boot();
-      });
-    }
-
-    var btnExport = $("#btnExport");
-    if (btnExport && !btnExport._bound) {
-      btnExport._bound = true;
-      btnExport.addEventListener("click", function () {
-        try {
-          var data = JSON.stringify(state, null, 2);
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(data).then(function () {
-              toast("セーブデータをコピーしました。");
-            }).catch(function () {
-              prompt("セーブデータをコピー:", data);
-            });
-          } else {
-            prompt("セーブデータをコピー:", data);
-          }
-        } catch (e) {
-          prompt("セーブデータをコピー:", JSON.stringify(state));
-        }
-      });
-    }
-  }
-
-  // ---------- Boot ----------
   function boot() {
-    if (state.profileLocked) {
-      ensureDaily();
-      viewGame();
-    } else {
-      viewProfile();
-    }
+    registerSW();
+    ensureDaily();
+    state.profileLocked ? gameView() : profileView();
   }
 
   boot();
-
 })();
