@@ -1114,7 +1114,7 @@ window.addEventListener("unhandledrejection", function (e) {
 
 
   // ---------- Reset & Export ----------
-let resetStep = 0;
+var resetStep = 0;
 
 const btnReset = $("#btnReset");
 if (btnReset) {
