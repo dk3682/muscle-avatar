@@ -122,11 +122,14 @@ background:#ff0033;color:#fff;padding:10px;font:700 14px -apple-system,system-ui
 <script>
   alert("SCRIPT START");
 (() => {
-window.addEventListener("error", (e) => {
-  alert("JS Error: " + (e.message || e.error));
+window.addEventListener("error", function (e) {
+  alert("JS Error: " + (e && e.message ? e.message : String(e)));
 });
-window.addEventListener("unhandledrejection", (e) => {
-  alert("Promise Error: " + (e.reason?.message || e.reason));
+
+window.addEventListener("unhandledrejection", function (e) {
+  var r = e && e.reason;
+  var msg = (r && r.message) ? r.message : String(r);
+  alert("Promise Error: " + msg);
 });
   // ---------- Utilities ----------
   const $ = (sel) => document.querySelector(sel);
