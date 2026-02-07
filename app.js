@@ -1,14 +1,30 @@
-  alert("SCRIPT START");
+// ---- Global error handler (production-friendly) ----
 (() => {
-window.addEventListener("error", function (e) {
-  alert("JS Error: " + (e && e.message ? e.message : String(e)));
-});
 
-window.addEventListener("unhandledrejection", function (e) {
-  var r = e && e.reason;
-  var msg = (r && r.message) ? r.message : String(r);
-  alert("Promise Error: " + msg);
-});
+  window.addEventListener("error", function (e) {
+    const message = e && e.message ? e.message : String(e);
+
+    // 開発用ログ
+    console.error("JS Error:", message, e);
+
+    // 画面通知（toastが存在する場合だけ）
+    if (typeof toast === "function") {
+      toast("Error: " + message);
+    }
+  });
+
+  window.addEventListener("unhandledrejection", function (e) {
+    const r = e && e.reason;
+    const msg = (r && r.message) ? r.message : String(r);
+
+    console.error("Promise Error:", msg, e);
+
+    if (typeof toast === "function") {
+      toast("Error: " + msg);
+    }
+  });
+
+})();
   // ---------- Utilities ----------
   const $ = (sel) => document.querySelector(sel);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
