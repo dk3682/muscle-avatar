@@ -152,154 +152,107 @@
   }
 
   var canvas = document.createElement("canvas");
-  canvas.width = 900;
-  canvas.height = 620;
+  canvas.width = 420;
+  canvas.height = 410;
+  canvas.style.width = "100%";
+  canvas.style.maxWidth = "420px";
+  canvas.style.height = "auto";
+  canvas.style.display = "block";
+  canvas.style.margin = "0 auto";
 
   // ---------- UI helpers ----------
-  function selector(label, key, list, index, isColor) {
-    var text = escapeHtml(list[index]);
-    var swatch = "";
-    if (isColor && key === "hairColor") {
-      swatch = "<span style='width:14px;height:14px;border-radius:50%;background:"+HAIR_COLORS[index]+";border:1px solid rgba(255,255,255,0.2)'></span>";
-      text = swatch + "<span>" + escapeHtml(list[index]) + "</span>";
+  function selectField(label, key, list) {
+    var html = "<label class='fLabel'>" + escapeHtml(label) + "</label>";
+    html += "<select class='fSelect' data-select='" + key + "'>";
+    for (var i = 0; i < list.length; i++) {
+      var selected = (state.profile[key] === i) ? " selected" : "";
+      html += "<option value='" + i + "'" + selected + ">" + escapeHtml(list[i]) + "</option>";
     }
-    if (isColor && key === "skinTone") {
-      swatch = "<span style='width:14px;height:14px;border-radius:50%;background:"+SKIN_BASE[index]+";border:1px solid rgba(255,255,255,0.2)'></span>";
-      text = swatch + "<span>" + escapeHtml(list[index]) + "</span>";
-    }
-
-    return (
-      "<div class='selectorRow' style='display:flex;gap:10px;align-items:center;justify-content:space-between;margin:8px 0;'>" +
-        "<button class='btnSmall' data-key='" + key + "' data-dir='-1'>◀</button>" +
-        "<div style='flex:1; text-align:center;'>" +
-          "<div style='opacity:.7;font-size:12px;font-weight:800;'>" + escapeHtml(label) + "</div>" +
-          "<div style='font-weight:900;font-size:14px;display:flex;gap:8px;justify-content:center;align-items:center;'>" + text + "</div>" +
-        "</div>" +
-        "<button class='btnSmall' data-key='" + key + "' data-dir='1'>▶</button>" +
-      "</div>"
-    );
+    html += "</select>";
+    return "<div class='fRow'>" + html + "</div>";
   }
 
-  function getOptionLength(key) {
-    switch (key) {
-      case "skinTone": return SKIN_BASE.length;
-      case "skinUndertone": return UNDERTONE.length;
-      case "faceShape": return FACE_SHAPES.length;
-      case "hairStyle": return HAIR_STYLES.length;
-      case "hairColor": return HAIR_COLORS.length;
-      case "eyes": return EYES.length;
-      case "brows": return BROWS.length;
-      case "mouth": return MOUTHS.length;
-      case "beard": return BEARDS.length;
-      default: return 1;
-    }
-  }
-
-  function bindSelectorButtons() {
-    var btns = root.querySelectorAll("button[data-key]");
-    for (var i = 0; i < btns.length; i++) {
-      (function (btn) {
-        btn.addEventListener("click", function () {
-          var key = btn.getAttribute("data-key");
-          var dir = parseInt(btn.getAttribute("data-dir"), 10);
-          var max = getOptionLength(key);
-          state.profile[key] = (state.profile[key] + dir + max) % max;
+  function bindSelects() {
+    var selects = root.querySelectorAll("select[data-select]");
+    for (var i = 0; i < selects.length; i++) {
+      (function (el) {
+        el.addEventListener("change", function () {
+          var key = el.getAttribute("data-select");
+          state.profile[key] = parseInt(el.value, 10) || 0;
           save();
-          viewProfile(); // rerender
+          drawAvatar(true);
         });
-      })(btns[i]);
+      })(selects[i]);
     }
   }
 
-  // ---------- Screens ----------
   function viewProfile() {
     root.innerHTML = "";
 
     var wrap = document.createElement("div");
+    wrap.style.height = "100%";
     wrap.style.display = "grid";
-    wrap.style.gridTemplateColumns = "1fr";
-    wrap.style.gap = "12px";
+    wrap.style.gridTemplateRows = "auto minmax(0,1fr) auto";
+    wrap.style.gap = "10px";
 
-    var card1 = document.createElement("div");
-    card1.style.background = "rgba(255,255,255,0.06)";
-    card1.style.border = "1px solid rgba(255,255,255,0.08)";
-    card1.style.borderRadius = "16px";
-    card1.style.padding = "14px";
-
-    var card2 = document.createElement("div");
-    card2.style.background = "rgba(255,255,255,0.06)";
-    card2.style.border = "1px solid rgba(255,255,255,0.08)";
-    card2.style.borderRadius = "16px";
-    card2.style.padding = "14px";
-
-    card1.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>" +
-        "<div>" +
-          "<div style='font-weight:900;font-size:18px;'>Create your avatar</div>" +
-          "<div style='opacity:.7;font-size:12px;font-weight:700;'>Name + look (only once). After you confirm, it’s locked.</div>" +
-        "</div>" +
-        "<div style='font-size:12px;font-weight:900;opacity:.9;background:rgba(255,200,0,0.12);border:1px solid rgba(255,200,0,0.25);padding:6px 10px;border-radius:999px;'>PROFILE SETUP</div>" +
-      "</div>" +
-      "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-
-      "<div style='display:flex;flex-direction:column;gap:10px;'>" +
-        "<div>" +
-          "<div style='opacity:.7;font-size:12px;font-weight:900;margin-bottom:6px;'>NAME (1–12 chars)</div>" +
-          "<input id='nameInput' maxlength='12' placeholder='e.g., Daichi' value='" + escapeHtml(state.profile.name) + "' " +
-                 "style='width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.15);background:rgba(0,0,0,0.25);color:#fff;font-weight:800;'>" +
-        "</div>" +
-
-        "<div style='display:flex;gap:8px;flex-wrap:wrap;'>" +
-          "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;opacity:.9;font-weight:800;font-size:12px;'>Face</span>" +
-          "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;opacity:.9;font-weight:800;font-size:12px;'>Hair</span>" +
-          "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;opacity:.9;font-weight:800;font-size:12px;'>Tone</span>" +
-        "</div>" +
-
-        selector("Face shape", "faceShape", FACE_SHAPES, state.profile.faceShape, false) +
-        selector("Eyes", "eyes", EYES, state.profile.eyes, false) +
-        selector("Brows", "brows", BROWS, state.profile.brows, false) +
-        selector("Mouth", "mouth", MOUTHS, state.profile.mouth, false) +
-        selector("Beard", "beard", BEARDS, state.profile.beard, false) +
-
-        "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-
-        selector("Hair style", "hairStyle", HAIR_STYLES, state.profile.hairStyle, false) +
-        selector("Hair color", "hairColor", ["Color 1","Color 2","Color 3","Color 4","Color 5","Color 6"], state.profile.hairColor, true) +
-
-        "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-
-        "<div style='font-weight:900;'>Skin</div>" +
-        "<div style='opacity:.7;font-size:12px;font-weight:700;margin-top:2px;'>Choose tone + undertone. This affects shading too.</div>" +
-
-        selector("Skin tone", "skinTone", ["Tone 1","Tone 2","Tone 3","Tone 4","Tone 5","Tone 6","Tone 7","Tone 8"], state.profile.skinTone, true) +
-        selector("Undertone", "skinUndertone", ["Cool","Neutral","Warm"], state.profile.skinUndertone, false) +
-
-        "<div style='margin-top:10px;display:flex;justify-content:flex-end;'>" +
-          "<button id='btnConfirmProfile' style='padding:12px 14px;border-radius:12px;border:1px solid rgba(125,211,252,0.35);background:rgba(125,211,252,0.16);color:#fff;font-weight:900;'>Confirm & Lock</button>" +
-        "</div>" +
-
-        "<div style='opacity:.7;font-size:12px;font-weight:700;'>" +
-          "Tip: The game is about watching your body change. After locking, you’ll grow via Chest/Shoulders/Arms." +
-        "</div>" +
+    var head = document.createElement("div");
+    head.innerHTML =
+      "<div style='display:flex;justify-content:space-between;align-items:center;gap:8px;'>" +
+        "<div><div style='font-size:19px;font-weight:900;'>Mii風アバター作成</div><div style='opacity:.72;font-size:12px;'>一度確定すると見た目は固定されます</div></div>" +
+        "<span style='font-size:11px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.2);'>SETUP</span>" +
       "</div>";
 
-    card2.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>" +
-        "<div>" +
-          "<div style='font-weight:900;'>Preview</div>" +
-          "<div style='opacity:.7;font-size:12px;font-weight:700;'>Your body will change as you train.</div>" +
-        "</div>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;opacity:.9;font-weight:800;font-size:12px;'>Live</span>" +
-      "</div>" +
-      "<div style='margin-top:10px;'></div>";
+    var body = document.createElement("div");
+    body.style.display = "grid";
+    body.style.gridTemplateColumns = (window.innerWidth < 820) ? "1fr" : "1fr 1fr";
+    body.style.gap = "10px";
+    body.style.minHeight = "0";
 
-    card2.appendChild(canvas);
+    var left = document.createElement("div");
+    left.style.background = "var(--panel)";
+    left.style.border = "1px solid var(--line)";
+    left.style.borderRadius = "16px";
+    left.style.padding = "10px";
+    left.style.display = "grid";
+    left.style.gridTemplateRows = "auto minmax(0,1fr)";
+    left.innerHTML =
+      "<div><label class='fLabel'>NAME</label><input id='nameInput' maxlength='12' value='" + escapeHtml(state.profile.name) + "' placeholder='e.g. Daichi' class='fInput'></div>" +
+      "<div style='overflow:auto;padding-right:4px;display:grid;gap:8px;'>" +
+      selectField("Face", "faceShape", FACE_SHAPES) +
+      selectField("Eyes", "eyes", EYES) +
+      selectField("Brows", "brows", BROWS) +
+      selectField("Mouth", "mouth", MOUTHS) +
+      selectField("Beard", "beard", BEARDS) +
+      selectField("Hair style", "hairStyle", HAIR_STYLES) +
+      selectField("Hair color", "hairColor", ["Black","Dark","Brown","Light Brown","Blonde","Gray"]) +
+      selectField("Skin", "skinTone", ["Tone 1","Tone 2","Tone 3","Tone 4","Tone 5","Tone 6","Tone 7","Tone 8"]) +
+      selectField("Undertone", "skinUndertone", ["Cool","Neutral","Warm"]) +
+      "</div>";
 
-    wrap.appendChild(card1);
-    wrap.appendChild(card2);
+    var right = document.createElement("div");
+    right.style.background = "var(--panel)";
+    right.style.border = "1px solid var(--line)";
+    right.style.borderRadius = "16px";
+    right.style.padding = "8px";
+    right.style.display = "flex";
+    right.style.alignItems = "center";
+    right.appendChild(canvas);
+
+    body.appendChild(left);
+    body.appendChild(right);
+
+    var foot = document.createElement("div");
+    foot.style.display = "flex";
+    foot.style.gap = "8px";
+    foot.innerHTML =
+      "<button id='btnReset' class='pBtn pBtnSub'>Reset</button>" +
+      "<button id='btnConfirmProfile' class='pBtn'>確定して開始</button>";
+
+    wrap.appendChild(head);
+    wrap.appendChild(body);
+    wrap.appendChild(foot);
     root.appendChild(wrap);
 
-    // bind
     var nameInput = $("#nameInput");
     if (nameInput) {
       nameInput.addEventListener("input", function (e) {
@@ -309,20 +262,20 @@
       });
     }
 
-    bindSelectorButtons();
+    bindSelects();
+    bindUtilityButtons();
 
     var btn = $("#btnConfirmProfile");
     if (btn) {
       btn.addEventListener("click", function () {
         var name = (state.profile.name || "").trim();
-        if (!name) { toast("Please enter a name."); return; }
-        var ok = confirm("Lock this avatar? You won't be able to change name or appearance later.");
+        if (!name) { toast("名前を入力してください"); return; }
+        var ok = confirm("この見た目で固定しますか？");
         if (!ok) return;
         state.profileLocked = true;
         state.createdAt = new Date().toISOString();
         if (!state.progress.lastDay) state.progress.lastDay = nowDateKey();
         save();
-        toast("Profile locked.");
         ensureDaily();
         viewGame();
       });
@@ -340,78 +293,72 @@
 
     var p = state.progress;
 
+    var layout = document.createElement("div");
+    layout.style.height = "100%";
+    layout.style.display = "grid";
+    layout.style.gridTemplateRows = "auto minmax(0,1fr) auto";
+    layout.style.gap = "10px";
+
     var header = document.createElement("div");
-    header.style.background = "rgba(255,255,255,0.06)";
-    header.style.border = "1px solid rgba(255,255,255,0.08)";
-    header.style.borderRadius = "16px";
-    header.style.padding = "14px";
+    header.style.background = "var(--panel)";
+    header.style.border = "1px solid var(--line)";
+    header.style.borderRadius = "14px";
+    header.style.padding = "10px";
     header.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>" +
-        "<div>" +
-          "<div style='font-weight:900;font-size:18px;'>" + escapeHtml(state.profile.name) + "</div>" +
-          "<div style='opacity:.7;font-size:12px;font-weight:700;'>Level " + p.level + " · Streak " + p.streak + " days · Total sets " + p.totalSets + "</div>" +
-        "</div>" +
-        "<div style='display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;'>" +
-          "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Sets left: <b>" + p.setsLeft + "</b>/3</span>" +
-          "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Fatigue: <b>" + p.fatigue + "</b></span>" +
-        "</div>" +
+      "<div><div style='font-weight:900;font-size:18px;'>" + escapeHtml(state.profile.name) + "</div><div style='font-size:12px;opacity:.75;'>Lv." + p.level + " / XP " + p.xp + " / Streak " + p.streak + "日</div></div>" +
+      "<div style='display:grid;gap:4px;text-align:right;font-size:12px;'><b>残りセット " + p.setsLeft + "/3</b><span style='opacity:.75;'>Fatigue " + p.fatigue + "</span></div>" +
       "</div>" +
-      "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='display:grid;grid-template-columns:repeat(3,1fr);gap:10px;'>" +
-        "<div style='background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px;'><div style='opacity:.7;font-size:12px;font-weight:900;'>Chest</div><div style='font-weight:900;font-size:18px;'>" + p.chest.toFixed(1) + "</div></div>" +
-        "<div style='background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px;'><div style='opacity:.7;font-size:12px;font-weight:900;'>Shoulders</div><div style='font-weight:900;font-size:18px;'>" + p.shoulders.toFixed(1) + "</div></div>" +
-        "<div style='background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:10px;'><div style='opacity:.7;font-size:12px;font-weight:900;'>Arms</div><div style='font-weight:900;font-size:18px;'>" + p.arms.toFixed(1) + "</div></div>" +
+      "<div style='margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px;'>" +
+      "<div class='mini'>胸<br><b>" + p.chest.toFixed(1) + "</b></div><div class='mini'>肩<br><b>" + p.shoulders.toFixed(1) + "</b></div><div class='mini'>腕<br><b>" + p.arms.toFixed(1) + "</b></div>" +
       "</div>";
 
-    var grid = document.createElement("div");
-    grid.style.display = "grid";
-    grid.style.gridTemplateColumns = "1fr";
-    grid.style.gap = "12px";
-    grid.style.marginTop = "12px";
+    var middle = document.createElement("div");
+    middle.style.display = "grid";
+    middle.style.gridTemplateColumns = (window.innerWidth < 820) ? "1fr" : "1.05fr 1fr";
+    middle.style.gap = "10px";
+    middle.style.minHeight = "0";
 
-    var cardA = document.createElement("div");
-    cardA.style.background = "rgba(255,255,255,0.06)";
-    cardA.style.border = "1px solid rgba(255,255,255,0.08)";
-    cardA.style.borderRadius = "16px";
-    cardA.style.padding = "14px";
-    cardA.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>" +
-        "<div><div style='font-weight:900;'>Avatar</div><div style='opacity:.7;font-size:12px;font-weight:700;'>Your physique reflects your training distribution.</div></div>" +
-        "<div style='font-size:12px;font-weight:900;opacity:.9;background:rgba(134,239,172,0.12);border:1px solid rgba(134,239,172,0.25);padding:6px 10px;border-radius:999px;'>GROWTH</div>" +
-      "</div>" +
-      "<div style='margin-top:10px;'></div>";
-    cardA.appendChild(canvas);
+    var avatarCard = document.createElement("div");
+    avatarCard.style.background = "var(--panel)";
+    avatarCard.style.border = "1px solid var(--line)";
+    avatarCard.style.borderRadius = "14px";
+    avatarCard.style.padding = "8px";
+    avatarCard.style.display = "flex";
+    avatarCard.style.alignItems = "center";
+    avatarCard.appendChild(canvas);
 
-    var cardB = document.createElement("div");
-    cardB.style.background = "rgba(255,255,255,0.06)";
-    cardB.style.border = "1px solid rgba(255,255,255,0.08)";
-    cardB.style.borderRadius = "16px";
-    cardB.style.padding = "14px";
-    cardB.innerHTML =
-      "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>" +
-        "<div><div style='font-weight:900;'>Bench Press (Chest target)</div><div style='opacity:.7;font-size:12px;font-weight:700;'>Form tweak × Rep timing → where the gains go.</div></div>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>1 set ≈ 30–45s</span>" +
-      "</div>" +
-      "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div id='stage'></div>" +
-      "<div style='margin-top:12px;display:flex;justify-content:flex-end;'>" +
-        "<button id='btnStart' style='padding:12px 14px;border-radius:12px;border:1px solid rgba(125,211,252,0.35);background:rgba(125,211,252,0.16);color:#fff;font-weight:900;'>Start Set</button>" +
-      "</div>" +
-      "<div style='opacity:.7;font-size:12px;font-weight:700;margin-top:8px;'>" +
-        "If your form is weird, gains leak: <b>Too close</b> → Arms · <b>Too wide</b> → Shoulders." +
-      "</div>";
+    var gameCard = document.createElement("div");
+    gameCard.style.background = "var(--panel)";
+    gameCard.style.border = "1px solid var(--line)";
+    gameCard.style.borderRadius = "14px";
+    gameCard.style.padding = "10px";
+    gameCard.style.display = "grid";
+    gameCard.style.gridTemplateRows = "auto minmax(0,1fr) auto";
+    gameCard.innerHTML =
+      "<div><b>Bench Press</b><div style='font-size:12px;opacity:.75;'>フォーム+タイミングで成長先が変化</div></div>" +
+      "<div id='stage' style='overflow:auto'></div>" +
+      "<button id='btnStart' class='pBtn'>セット開始</button>";
 
-    grid.appendChild(cardA);
-    grid.appendChild(cardB);
+    middle.appendChild(avatarCard);
+    middle.appendChild(gameCard);
 
-    root.appendChild(header);
-    root.appendChild(grid);
+    var foot = document.createElement("div");
+    foot.style.display = "flex";
+    foot.style.gap = "8px";
+    foot.innerHTML = "<button id='btnExport' class='pBtn pBtnSub'>Export</button><button id='btnReset' class='pBtn pBtnSub'>Reset</button>";
+
+    layout.appendChild(header);
+    layout.appendChild(middle);
+    layout.appendChild(foot);
+    root.appendChild(layout);
 
     var btnStart = $("#btnStart");
     if (btnStart) btnStart.addEventListener("click", startSet);
 
     drawAvatar(false);
     renderStageIdle();
+    bindUtilityButtons();
   }
 
   function renderStageIdle() {
@@ -732,66 +679,70 @@
     var beard = state.profile.beard;
     var hairC = HAIR_COLORS[state.profile.hairColor];
 
-    ctx.strokeStyle = "rgba(0,0,0,0.55)";
-    ctx.lineWidth = 6;
+    var browY = y - faceH * 0.15;
+    var eyeY = y - faceH * 0.05;
+    var spacing = faceW * 0.2;
+
+    // brows (Mii-like bold simple lines)
+    ctx.strokeStyle = "#1e1f28";
     ctx.lineCap = "round";
-
-    var browY = y - faceH * 0.10;
-    var eyeY = y - faceH * 0.02;
-
-    // brows
-    var sides = [-1, 1];
-    for (var i = 0; i < sides.length; i++) {
-      var s = sides[i];
+    ctx.lineWidth = 4.5;
+    for (var i = -1; i <= 1; i += 2) {
+      var bx = x + i * spacing;
       ctx.beginPath();
-      var bx = x + s * faceW * 0.18;
-      if (brow === 0) ctx.quadraticCurveTo(bx - s * 30, browY - 6, bx + s * 30, browY);
-      if (brow === 1) { ctx.moveTo(bx - s * 30, browY); ctx.lineTo(bx + s * 30, browY); }
-      if (brow === 2) ctx.quadraticCurveTo(bx - s * 30, browY + 6, bx + s * 30, browY - 8);
-      if (brow === 3) { ctx.lineWidth = 8; ctx.moveTo(bx - s * 32, browY); ctx.lineTo(bx + s * 32, browY); ctx.lineWidth = 6; }
+      if (brow === 0) { ctx.moveTo(bx - i * 16, browY + 1); ctx.lineTo(bx + i * 16, browY - 1); }
+      if (brow === 1) { ctx.moveTo(bx - i * 16, browY - 2); ctx.lineTo(bx + i * 16, browY - 2); }
+      if (brow === 2) { ctx.moveTo(bx - i * 16, browY + 4); ctx.lineTo(bx + i * 16, browY - 5); }
+      if (brow === 3) { ctx.lineWidth = 6; ctx.moveTo(bx - i * 18, browY + 2); ctx.lineTo(bx + i * 18, browY - 2); ctx.lineWidth = 4.5; }
       ctx.stroke();
     }
 
-    // eyes
-    ctx.lineWidth = 5;
-    for (var j = 0; j < sides.length; j++) {
-      var ss = sides[j];
-      var ex = x + ss * faceW * 0.18;
+    // eyes (black ovals)
+    ctx.fillStyle = "#1f2433";
+    for (var j = -1; j <= 1; j += 2) {
+      var ex = x + j * spacing;
+      var rx = eye === 2 ? 8 : 7;
+      var ry = eye === 3 ? 4 : 5;
       ctx.beginPath();
-      if (eye === 0) ctx.ellipse(ex, eyeY, 18, 10, 0, 0, Math.PI * 2);
-      if (eye === 1) ctx.ellipse(ex, eyeY, 20, 8, 0.25 * ss, 0, Math.PI * 2);
-      if (eye === 2) ctx.ellipse(ex, eyeY, 22, 12, 0, 0, Math.PI * 2);
-      if (eye === 3) ctx.ellipse(ex, eyeY + 2, 18, 7, 0, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = "rgba(0,0,0,0.65)";
-      ctx.beginPath();
-      ctx.arc(ex + (eye === 1 ? ss * 4 : 0), eyeY + (eye === 3 ? 2 : 0), 4.5, 0, Math.PI * 2);
+      if (eye === 1) ctx.ellipse(ex, eyeY, rx + 1, ry, j * 0.25, 0, Math.PI * 2);
+      else ctx.ellipse(ex, eyeY, rx, ry, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // mouth
-    var my = y + faceH * 0.18;
-    ctx.strokeStyle = "rgba(0,0,0,0.55)";
-    ctx.lineWidth = 6;
+    // simple nose
+    ctx.strokeStyle = "#2b2f3f";
+    ctx.lineWidth = 2.8;
     ctx.beginPath();
-    if (mouth === 0) { ctx.moveTo(x - faceW * 0.12, my); ctx.lineTo(x + faceW * 0.12, my); }
-    if (mouth === 1) ctx.quadraticCurveTo(x, my + 14, x + faceW * 0.12, my);
-    if (mouth === 2) ctx.quadraticCurveTo(x, my + 18, x + faceW * 0.14, my - 2);
-    if (mouth === 3) ctx.quadraticCurveTo(x, my - 10, x + faceW * 0.12, my);
+    ctx.moveTo(x + 2, y - 2);
+    ctx.lineTo(x + 2, y + 16);
+    ctx.quadraticCurveTo(x + 1, y + 20, x - 5, y + 20);
     ctx.stroke();
 
-    // beard
+    // mouth
+    var my = y + faceH * 0.20;
+    ctx.strokeStyle = "#2f3038";
+    ctx.lineWidth = 3.2;
+    ctx.beginPath();
+    if (mouth === 0) { ctx.moveTo(x - 14, my); ctx.lineTo(x + 14, my); }
+    if (mouth === 1) { ctx.moveTo(x - 14, my - 2); ctx.quadraticCurveTo(x, my + 7, x + 14, my - 2); }
+    if (mouth === 2) { ctx.moveTo(x - 14, my - 4); ctx.quadraticCurveTo(x, my + 10, x + 14, my - 4); }
+    if (mouth === 3) { ctx.moveTo(x - 14, my + 3); ctx.quadraticCurveTo(x, my - 6, x + 14, my + 3); }
+    ctx.stroke();
+
+    // subtle blush dots
+    ctx.fillStyle = "rgba(255,120,140,0.18)";
+    ctx.beginPath();
+    ctx.ellipse(x - spacing - 8, y + faceH * 0.08, 8, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + spacing + 8, y + faceH * 0.08, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     if (beard !== 0) {
-      ctx.fillStyle = mixColor(hairC, "#000000", 0.15);
-      ctx.globalAlpha = 0.35;
-      if (beard === 1) {
-        roundedRect(ctx, x - faceW * 0.32, y + faceH * 0.06, faceW * 0.64, faceH * 0.40, 60);
-        ctx.fill();
-      } else if (beard === 2) {
-        roundedRect(ctx, x - faceW * 0.10, y + faceH * 0.20, faceW * 0.20, faceH * 0.22, 40);
-        ctx.fill();
-      } else if (beard === 3) {
-        roundedRect(ctx, x - faceW * 0.36, y + faceH * 0.04, faceW * 0.72, faceH * 0.48, 70);
+      ctx.fillStyle = mixColor(hairC, "#000", 0.15);
+      ctx.globalAlpha = 0.22;
+      roundedRect(ctx, x - faceW * 0.19, y + faceH * 0.20, faceW * 0.38, beard === 2 ? 18 : 30, 16);
+      ctx.fill();
+      if (beard === 3) {
+        roundedRect(ctx, x - faceW * 0.30, y + faceH * 0.12, faceW * 0.60, 48, 20);
         ctx.fill();
       }
       ctx.globalAlpha = 1;
@@ -799,91 +750,41 @@
   }
 
   function drawHair(ctx, x, y, faceW, faceH, styleIndex, color) {
-    ctx.fillStyle = color;
-    ctx.strokeStyle = "rgba(0,0,0,0.25)";
-    ctx.lineWidth = 3;
+    var top = y - faceH * 0.58;
+    var left = x - faceW * 0.58;
+    var hw = faceW * 1.16;
+    var hh = faceH * 0.58;
 
-    var top = y - faceH * 0.22;
-    var left = x - faceW * 0.55;
+    // base cap
+    var grad = ctx.createLinearGradient(0, top, 0, top + hh);
+    grad.addColorStop(0, mixColor(color, "#ffffff", 0.10));
+    grad.addColorStop(1, mixColor(color, "#000000", 0.25));
+    ctx.fillStyle = grad;
+    roundedRect(ctx, left, top, hw, hh, 46);
+    ctx.fill();
 
+    // style spikes/bangs
+    ctx.fillStyle = mixColor(color, "#000000", 0.18);
     ctx.beginPath();
-    switch (styleIndex) {
-      case 0: // buzz
-        ctx.globalAlpha = 0.85;
-        ctx.ellipse(x, y - faceH * 0.18, faceW * 0.46, faceH * 0.22, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-        break;
-      case 1: // short
-        roundedRect(ctx, x - faceW * 0.54, top, faceW * 1.08, faceH * 0.38, 42);
-        ctx.fill();
-        break;
-      case 2: // side part
-        roundedRect(ctx, x - faceW * 0.56, top, faceW * 1.12, faceH * 0.40, 46);
-        ctx.fill();
-        ctx.clearRect(x + faceW * 0.06, top + 18, faceW * 0.08, faceH * 0.32);
-        break;
-      case 3: // messy
-        roundedRect(ctx, x - faceW * 0.56, top, faceW * 1.12, faceH * 0.38, 44);
-        ctx.fill();
-        for (var i = 0; i < 7; i++) {
-          ctx.beginPath();
-          ctx.moveTo(x - faceW * 0.40 + i * 18, top + 10);
-          ctx.lineTo(x - faceW * 0.46 + i * 18, top - 18);
-          ctx.lineTo(x - faceW * 0.30 + i * 18, top - 8);
-          ctx.closePath();
-          ctx.fill();
-        }
-        break;
-      case 4: // wavy
-        roundedRect(ctx, x - faceW * 0.56, top, faceW * 1.12, faceH * 0.44, 48);
-        ctx.fill();
-        ctx.globalAlpha = 0.25;
-        ctx.strokeStyle = "rgba(255,255,255,0.25)";
-        ctx.lineWidth = 4;
-        for (var j = 0; j < 5; j++) {
-          ctx.beginPath();
-          ctx.moveTo(x - faceW * 0.46 + j * 42, top + 20);
-          ctx.quadraticCurveTo(x - faceW * 0.40 + j * 42, top + 52, x - faceW * 0.34 + j * 42, top + 24);
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-        break;
-      case 5: // curly
-        roundedRect(ctx, x - faceW * 0.56, top, faceW * 1.12, faceH * 0.46, 52);
-        ctx.fill();
-        for (var k = 0; k < 14; k++) {
-          var px = x - faceW * 0.48 + (k % 7) * 40;
-          var py = top + 14 + Math.floor(k / 7) * 42;
-          ctx.beginPath();
-          ctx.arc(px, py, 14, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        break;
-      case 6: // slick back
-        roundedRect(ctx, x - faceW * 0.56, top, faceW * 1.12, faceH * 0.36, 44);
-        ctx.fill();
-        ctx.globalAlpha = 0.22;
-        ctx.strokeStyle = "rgba(255,255,255,0.35)";
-        ctx.lineWidth = 4;
-        for (var m = 0; m < 6; m++) {
-          ctx.beginPath();
-          ctx.moveTo(left + 20 + m * 28, top + 18);
-          ctx.lineTo(left + 50 + m * 28, top + 72);
-          ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-        break;
-      case 7: // medium
-        roundedRect(ctx, x - faceW * 0.58, top, faceW * 1.16, faceH * 0.52, 54);
-        ctx.fill();
-        roundedRect(ctx, x - faceW * 0.64, y - faceH * 0.08, faceW * 0.22, faceH * 0.44, 40);
-        ctx.fill();
-        roundedRect(ctx, x + faceW * 0.42, y - faceH * 0.08, faceW * 0.22, faceH * 0.44, 40);
-        ctx.fill();
-        break;
+    var spikes = 6 + (styleIndex % 3);
+    for (var i = 0; i < spikes; i++) {
+      var px = left + 10 + i * (hw - 20) / (spikes - 1);
+      var deep = (i % 2 === 0 ? 16 : 8) + (styleIndex === 5 ? 8 : 0);
+      ctx.moveTo(px - 8, y - faceH * 0.19);
+      ctx.lineTo(px, y - faceH * 0.19 + deep);
+      ctx.lineTo(px + 8, y - faceH * 0.19);
     }
-    ctx.stroke();
+    ctx.fill();
+
+    // side part/slick accents
+    if (styleIndex === 2 || styleIndex === 6) {
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 12, top + 12);
+      ctx.lineTo(x + 20, top + hh - 10);
+      ctx.stroke();
+    }
   }
 
   function drawAvatar(isPreview) {
@@ -891,140 +792,114 @@
     var w = canvas.width, h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
-    // background
-    ctx.fillStyle = "#0f1018";
+    // neutral light background like Mii editor
+    ctx.fillStyle = "#e6e6e6";
     ctx.fillRect(0, 0, w, h);
-
-    var grad = ctx.createRadialGradient(w * 0.5, h * 0.2, 50, w * 0.5, h * 0.2, w * 0.7);
-    grad.addColorStop(0, "rgba(125,211,252,0.12)");
-    grad.addColorStop(1, "rgba(0,0,0,0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, w, h);
-
-    // Name
-    ctx.fillStyle = "rgba(231,231,234,0.85)";
-    ctx.font = "700 20px -apple-system,system-ui";
-    var nm = (state.profile.name || (isPreview ? "Preview" : "Player")).slice(0, 12);
-    ctx.fillText(nm, 22, 36);
 
     var p = state.progress;
     var chest = isPreview ? Math.min(p.chest, 14) : p.chest;
     var shoulders = isPreview ? Math.min(p.shoulders, 14) : p.shoulders;
     var arms = isPreview ? Math.min(p.arms, 14) : p.arms;
 
-    function g(x) { return 1 - Math.exp(-x / 40); }
+    function g(x) { return 1 - Math.exp(-x / 48); }
     var gC = g(chest), gS = g(shoulders), gA = g(arms);
 
     var cx = w * 0.5;
-    var topY = h * 0.18;
+    var headY = h * 0.23;
 
-    var shoulderWidth = 230 + 240 * gS;
-    var torsoWidth = 190 + 160 * gC;
-    var torsoDepth = 34 + 44 * gC;
-    var armRadius = 28 + 34 * gA;
+    var skinBase = SKIN_BASE[state.profile.skinTone] || SKIN_BASE[3];
+    var tint = UNDERTONE[state.profile.skinUndertone].tint;
+    var skin = mixColor(skinBase, tint, 0.08);
+    var skinShadow = darkenColor(skin, 0.12);
 
-    var baseSkin = SKIN_BASE[clamp(state.profile.skinTone, 0, SKIN_BASE.length - 1)];
-    var under = UNDERTONE[clamp(state.profile.skinUndertone, 0, UNDERTONE.length - 1)].tint;
-    var skin = mixColor(baseSkin, under, 0.10);
-    var skinShadow = darkenColor(skin, 0.18);
+    // Mii-like proportion: big head, compact torso, slim legs
+    var headW = 146;
+    var headH = 158;
+    var faceShape = state.profile.faceShape;
+    var roundness = [64, 56, 44, 38][faceShape] || 56;
+
+    var neckY = headY + headH * 0.50;
+    var shoulderW = 90 + 52 * gS;
+    var torsoW = 66 + 44 * gC;
+    var torsoH = 96;
+    var armW = 12 + 10 * gA;
+    var legW = 16 + 4 * gA;
+    var legH = 98;
+
+    // neck
+    ctx.fillStyle = skinShadow;
+    roundedRect(ctx, cx - 13, neckY - 4, 26, 18, 10);
+    ctx.fill();
+
+    // shirt (example-like red)
+    var shirtGrad = ctx.createLinearGradient(cx - torsoW, neckY + 18, cx + torsoW, neckY + 18);
+    shirtGrad.addColorStop(0, "#f34b3f");
+    shirtGrad.addColorStop(0.5, "#ff5d4e");
+    shirtGrad.addColorStop(1, "#f14639");
+
+    ctx.fillStyle = shirtGrad;
+    roundedRect(ctx, cx - shoulderW / 2, neckY + 12, shoulderW, torsoH * 0.45, 18);
+    ctx.fill();
+    roundedRect(ctx, cx - torsoW / 2, neckY + 30, torsoW, torsoH, 20);
+    ctx.fill();
+
+    // arms + hands
+    ctx.fillStyle = shirtGrad;
+    roundedRect(ctx, cx - shoulderW / 2 - armW + 5, neckY + 28, armW, 86, 12);
+    roundedRect(ctx, cx + shoulderW / 2 - 5, neckY + 28, armW, 86, 12);
+    ctx.fill();
+
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(cx - shoulderW / 2 - armW / 2 + 5, neckY + 114, 10, 0, Math.PI * 2);
+    ctx.arc(cx + shoulderW / 2 + armW / 2 - 5, neckY + 114, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // pants
+    var pantsGrad = ctx.createLinearGradient(0, neckY + 110, 0, h);
+    pantsGrad.addColorStop(0, "#505665");
+    pantsGrad.addColorStop(1, "#2b3040");
+    ctx.fillStyle = pantsGrad;
+    roundedRect(ctx, cx - torsoW * 0.46, neckY + 120, torsoW * 0.92, 34, 12);
+    ctx.fill();
+
+    // legs + shoes
+    ctx.fillStyle = pantsGrad;
+    roundedRect(ctx, cx - 6 - legW, neckY + 148, legW, legH, 12);
+    roundedRect(ctx, cx + 6, neckY + 148, legW, legH, 12);
+    ctx.fill();
+
+    ctx.fillStyle = "#3a3f4f";
+    roundedRect(ctx, cx - 8 - legW, neckY + 238, legW + 6, 14, 8);
+    roundedRect(ctx, cx + 2, neckY + 238, legW + 6, 14, 8);
+    ctx.fill();
 
     // head
-    var headR = 70;
-    var headX = cx, headY = topY + 60;
-
-    var faceShape = state.profile.faceShape;
-    var faceW = headR * 2.0;
-    var faceH = headR * 2.12;
-    var roundness = [0.92, 1.00, 0.78, 0.70][faceShape] || 1.0;
-
-    var neckH = 44;
-    var torsoTop = headY + headR + neckH - 6;
-    var torsoH = 270;
-
-    // torso
-    function drawRoundedTorso(ctx2, cx2, y, width, height, fill, depth, shoulderW, sVal, cVal) {
-      var topW = lerp(width * 0.92, width * 1.02, clamp(sVal, 0, 1));
-      var botW = width * 0.78;
-      var r = 60;
-      var shoulderExtra = lerp(0, (shoulderW - width) * 0.32, clamp(sVal, 0, 1));
-
-      var x0 = cx2 - topW / 2 - shoulderExtra * 0.2;
-      var x1 = cx2 + topW / 2 + shoulderExtra * 0.2;
-      var xb0 = cx2 - botW / 2;
-      var xb1 = cx2 + botW / 2;
-
-      ctx2.fillStyle = fill;
-      ctx2.beginPath();
-      ctx2.moveTo(x0 + r, y);
-      ctx2.lineTo(x1 - r, y);
-      ctx2.quadraticCurveTo(x1, y, x1, y + r);
-      ctx2.lineTo(xb1, y + height - r);
-      ctx2.quadraticCurveTo(xb1, y + height, xb1 - r, y + height);
-      ctx2.lineTo(xb0 + r, y + height);
-      ctx2.quadraticCurveTo(xb0, y + height, xb0, y + height - r);
-      ctx2.lineTo(x0, y + r);
-      ctx2.quadraticCurveTo(x0, y, x0 + r, y);
-      ctx2.closePath();
-      ctx2.fill();
-
-      ctx2.globalAlpha = 0.12 + 0.10 * cVal;
-      ctx2.fillStyle = "rgba(0,0,0,0.55)";
-      ctx2.beginPath();
-      ctx2.moveTo(x1 - r, y + r);
-      ctx2.lineTo(xb1 - r * 0.2, y + height - r);
-      ctx2.lineTo(cx2 + width * 0.10, y + height - r);
-      ctx2.lineTo(cx2 + width * 0.18, y + r);
-      ctx2.closePath();
-      ctx2.fill();
-      ctx2.globalAlpha = 1;
-    }
-
-    function drawArms(ctx2, cx2, y, shoulderW, armR, skin2, shadow2, aVal) {
-      var leftX = cx2 - shoulderW / 2 + armR * 0.6;
-      var rightX = cx2 + shoulderW / 2 - armR * 0.6;
-
-      var upperH = 190;
-      var foreH = 170;
-      var foreR = armR * (0.82 + 0.28 * aVal);
-
-      ctx2.fillStyle = shadow2;
-      capsule(ctx2, leftX + 10, y + 16, armR * 1.06, upperH);
-      capsule(ctx2, rightX + 10, y + 16, armR * 1.06, upperH);
-      capsule(ctx2, leftX + 10, y + upperH - 10, foreR * 1.02, foreH);
-      capsule(ctx2, rightX + 10, y + upperH - 10, foreR * 1.02, foreH);
-
-      ctx2.fillStyle = skin2;
-      capsule(ctx2, leftX, y, armR, upperH);
-      capsule(ctx2, rightX, y, armR, upperH);
-      capsule(ctx2, leftX, y + upperH - 18, foreR, foreH);
-      capsule(ctx2, rightX, y + upperH - 18, foreR, foreH);
-    }
-
-    drawRoundedTorso(ctx, cx, torsoTop + 8, torsoWidth * 1.02, torsoH, skinShadow, torsoDepth, shoulderWidth, gS, gC);
-    drawRoundedTorso(ctx, cx, torsoTop, torsoWidth, torsoH, skin, torsoDepth, shoulderWidth, gS, gC);
-    drawArms(ctx, cx, torsoTop + 74, shoulderWidth, armRadius, skin, skinShadow, gA);
-
-    // face
     ctx.fillStyle = skin;
-    roundedRect(ctx, headX - faceW / 2, headY - faceH / 2, faceW, faceH, 40 * roundness);
+    roundedRect(ctx, cx - headW / 2, headY - headH / 2, headW, headH, roundness);
     ctx.fill();
 
-    ctx.globalAlpha = 0.35;
+    ctx.globalAlpha = 0.18;
     ctx.fillStyle = skinShadow;
-    roundedRect(ctx, headX - faceW / 2 + 10, headY - faceH / 2 + 16, faceW - 20, faceH - 20, 36 * roundness);
+    roundedRect(ctx, cx - headW / 2 + 10, headY - headH / 2 + 12, headW - 20, headH - 18, roundness - 8);
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    drawHair(ctx, headX, headY - 40, faceW, faceH, state.profile.hairStyle, HAIR_COLORS[state.profile.hairColor]);
-    drawFaceFeatures(ctx, headX, headY, faceW, faceH);
+    drawHair(ctx, cx, headY, headW, headH, state.profile.hairStyle, HAIR_COLORS[state.profile.hairColor]);
+    drawFaceFeatures(ctx, cx, headY + 4, headW, headH);
 
-    // ground
-    ctx.globalAlpha = 0.25;
-    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    // shadow + name
+    ctx.globalAlpha = 0.20;
+    ctx.fillStyle = "#666";
     ctx.beginPath();
-    ctx.ellipse(cx, h * 0.90, 260, 34, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, h - 18, 58, 9, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
+
+    ctx.fillStyle = "rgba(40,40,50,0.85)";
+    ctx.font = "800 15px -apple-system,system-ui";
+    var nm = (state.profile.name || (isPreview ? "Preview" : "Player")).slice(0, 12);
+    ctx.fillText(nm, 14, 24);
   }
 
   function drawRepBar() {
@@ -1059,47 +934,50 @@
     ctx.fillText("Tap in the zone", bx, 36);
   }
 
-  // ---------- Reset / Export (single declaration; guarded) ----------
+  // ---------- Reset / Export ----------
   var resetStep = 0;
 
-  var btnReset = $("#btnReset");
-  if (btnReset) {
-    btnReset.addEventListener("click", function () {
-      if (resetStep === 0) {
-        resetStep = 1;
-        toast("Tap Reset again to confirm.");
-        setTimeout(function () { resetStep = 0; }, 3000);
-        return;
-      }
-      var ok = confirm("This will delete EVERYTHING (including locked avatar). Proceed?");
-      if (!ok) { resetStep = 0; return; }
-      localStorage.removeItem(KEY);
-      state = defaultState();
-      resetStep = 0;
-      toast("Reset complete.");
-      boot();
-    });
-  }
-
-  var btnExport = $("#btnExport");
-  if (btnExport) {
-    btnExport.addEventListener("click", function () {
-      try {
-        var data = JSON.stringify(state, null, 2);
-        // Clipboard API can fail on iOS; fallback to prompt
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(data).then(function () {
-            toast("Save data copied.");
-          }).catch(function () {
-            prompt("Copy save data:", data);
-          });
-        } else {
-          prompt("Copy save data:", data);
+  function bindUtilityButtons() {
+    var btnReset = $("#btnReset");
+    if (btnReset && !btnReset._bound) {
+      btnReset._bound = true;
+      btnReset.addEventListener("click", function () {
+        if (resetStep === 0) {
+          resetStep = 1;
+          toast("もう一度Resetで初期化");
+          setTimeout(function () { resetStep = 0; }, 2500);
+          return;
         }
-      } catch (e) {
-        prompt("Copy save data:", JSON.stringify(state));
-      }
-    });
+        var ok = confirm("すべてのデータを削除しますか？");
+        if (!ok) { resetStep = 0; return; }
+        localStorage.removeItem(KEY);
+        state = defaultState();
+        resetStep = 0;
+        toast("初期化しました");
+        boot();
+      });
+    }
+
+    var btnExport = $("#btnExport");
+    if (btnExport && !btnExport._bound) {
+      btnExport._bound = true;
+      btnExport.addEventListener("click", function () {
+        try {
+          var data = JSON.stringify(state, null, 2);
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(data).then(function () {
+              toast("Save data copied.");
+            }).catch(function () {
+              prompt("Copy save data:", data);
+            });
+          } else {
+            prompt("Copy save data:", data);
+          }
+        } catch (e) {
+          prompt("Copy save data:", JSON.stringify(state));
+        }
+      });
+    }
   }
 
   // ---------- Boot ----------
