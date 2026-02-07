@@ -10,7 +10,7 @@
     try {
       var msg = (e && e.message) ? e.message : String(e);
       console.error("JS Error:", msg, e);
-      if (typeof window.toast === "function") window.toast("Error: " + msg);
+      if (typeof window.toast === "function") window.toast("エラー: " + msg);
     } catch (_) {}
   });
 
@@ -19,7 +19,7 @@
       var r = e && e.reason;
       var msg = (r && r.message) ? r.message : String(r);
       console.error("Promise Error:", msg, e);
-      if (typeof window.toast === "function") window.toast("Error: " + msg);
+      if (typeof window.toast === "function") window.toast("エラー: " + msg);
     } catch (_) {}
   });
 
@@ -106,17 +106,17 @@
   // ---------- Options ----------
   var SKIN_BASE = ["#f7e6d6","#f0d6bf","#e7c3a5","#d8ab88","#c79068","#a8734f","#7c5337","#553526"];
   var UNDERTONE = [
-    {name:"Cool", tint:"#a8b9ff"},
-    {name:"Neutral", tint:"#ffffff"},
-    {name:"Warm", tint:"#ffd19a"}
+    {name:"クール", tint:"#a8b9ff"},
+    {name:"ニュートラル", tint:"#ffffff"},
+    {name:"ウォーム", tint:"#ffd19a"}
   ];
   var HAIR_COLORS = ["#111318","#2a1c12","#4a2a16","#7a4a2a","#c7b18a","#c7c7c7"];
-  var HAIR_STYLES = ["Buzz","Short","Side Part","Messy","Wavy","Curly","Slick Back","Medium"];
-  var FACE_SHAPES = ["Round","Oval","Square","V-shape"];
-  var EYES = ["Calm","Sharp","Wide","Tired"];
-  var BROWS = ["Soft","Straight","Angled","Thick"];
-  var MOUTHS = ["Neutral","Smile","Grin","Serious"];
-  var BEARDS = ["None","Stubble","Goatee","Full"];
+  var HAIR_STYLES = ["坊主","ショート","七三分け","ラフ","ウェーブ","カーリー","オールバック","ミディアム"];
+  var FACE_SHAPES = ["丸顔","卵型","四角","V字"];
+  var EYES = ["おだやか","シャープ","ぱっちり","眠そう"];
+  var BROWS = ["やわらか","ストレート","角度あり","太め"];
+  var MOUTHS = ["ふつう","笑顔","にっこり","真剣"];
+  var BEARDS = ["なし","うっすら","あごひげ","フル"];
 
   // ---------- State ----------
   var state = load() || defaultState();
@@ -139,7 +139,7 @@
       p.fatigue = Math.max(0, Math.floor(p.fatigue * 0.55));
       p.streak = p.streak + 1;
       save();
-      toast("New day: sets refreshed (3).");
+      toast("日付が変わったため、セット数が3に回復しました。");
     }
   }
 
@@ -190,16 +190,16 @@
     root.innerHTML = "";
 
     var wrap = document.createElement("div");
-    wrap.style.height = "100%";
+    wrap.style.minHeight = "100%";
     wrap.style.display = "grid";
-    wrap.style.gridTemplateRows = "auto minmax(0,1fr) auto";
+    wrap.style.gridTemplateRows = "auto auto auto";
     wrap.style.gap = "10px";
 
     var head = document.createElement("div");
     head.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:center;gap:8px;'>" +
-        "<div><div style='font-size:19px;font-weight:900;'>Mii風アバター作成</div><div style='opacity:.72;font-size:12px;'>一度確定すると見た目は固定されます</div></div>" +
-        "<span style='font-size:11px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.2);'>SETUP</span>" +
+        "<div><div style='font-size:19px;font-weight:900;'>Daily Mascle</div><div style='opacity:.72;font-size:12px;'>一度確定すると見た目は固定されます</div></div>" +
+        "<span style='font-size:11px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.2);'>初期設定</span>" +
       "</div>";
 
     var body = document.createElement("div");
@@ -207,6 +207,7 @@
     body.style.gridTemplateColumns = (window.innerWidth < 820) ? "1fr" : "1fr 1fr";
     body.style.gap = "10px";
     body.style.minHeight = "0";
+    body.style.overflowY = "auto";
 
     var left = document.createElement("div");
     left.style.background = "var(--panel)";
@@ -214,19 +215,19 @@
     left.style.borderRadius = "16px";
     left.style.padding = "10px";
     left.style.display = "grid";
-    left.style.gridTemplateRows = "auto minmax(0,1fr)";
+    left.style.gridTemplateRows = "auto auto";
     left.innerHTML =
-      "<div><label class='fLabel'>NAME</label><input id='nameInput' maxlength='12' value='" + escapeHtml(state.profile.name) + "' placeholder='e.g. Daichi' class='fInput'></div>" +
-      "<div style='overflow:auto;padding-right:4px;display:grid;gap:8px;'>" +
-      selectField("Face", "faceShape", FACE_SHAPES) +
-      selectField("Eyes", "eyes", EYES) +
-      selectField("Brows", "brows", BROWS) +
-      selectField("Mouth", "mouth", MOUTHS) +
-      selectField("Beard", "beard", BEARDS) +
-      selectField("Hair style", "hairStyle", HAIR_STYLES) +
-      selectField("Hair color", "hairColor", ["Black","Dark","Brown","Light Brown","Blonde","Gray"]) +
-      selectField("Skin", "skinTone", ["Tone 1","Tone 2","Tone 3","Tone 4","Tone 5","Tone 6","Tone 7","Tone 8"]) +
-      selectField("Undertone", "skinUndertone", ["Cool","Neutral","Warm"]) +
+      "<div><label class='fLabel'>名前</label><input id='nameInput' maxlength='12' value='" + escapeHtml(state.profile.name) + "' placeholder='例: だいち' class='fInput'></div>" +
+      "<div style='overflow:visible;padding-right:4px;display:grid;gap:8px;'>" +
+      selectField("顔", "faceShape", FACE_SHAPES) +
+      selectField("目", "eyes", EYES) +
+      selectField("眉", "brows", BROWS) +
+      selectField("口", "mouth", MOUTHS) +
+      selectField("ひげ", "beard", BEARDS) +
+      selectField("髪型", "hairStyle", HAIR_STYLES) +
+      selectField("髪色", "hairColor", ["黒","ダーク","ブラウン","ライトブラウン","ブロンド","グレー"]) +
+      selectField("肌色", "skinTone", ["トーン 1","トーン 2","トーン 3","トーン 4","トーン 5","トーン 6","トーン 7","トーン 8"]) +
+      selectField("アンダートーン", "skinUndertone", ["クール","ニュートラル","ウォーム"]) +
       "</div>";
 
     var right = document.createElement("div");
@@ -245,7 +246,7 @@
     foot.style.display = "flex";
     foot.style.gap = "8px";
     foot.innerHTML =
-      "<button id='btnReset' class='pBtn pBtnSub'>Reset</button>" +
+      "<button id='btnReset' class='pBtn pBtnSub'>リセット</button>" +
       "<button id='btnConfirmProfile' class='pBtn'>確定して開始</button>";
 
     wrap.appendChild(head);
@@ -294,9 +295,9 @@
     var p = state.progress;
 
     var layout = document.createElement("div");
-    layout.style.height = "100%";
+    layout.style.minHeight = "100%";
     layout.style.display = "grid";
-    layout.style.gridTemplateRows = "auto minmax(0,1fr) auto";
+    layout.style.gridTemplateRows = "auto auto auto";
     layout.style.gap = "10px";
 
     var header = document.createElement("div");
@@ -306,8 +307,8 @@
     header.style.padding = "10px";
     header.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:flex-start;gap:10px;'>" +
-      "<div><div style='font-weight:900;font-size:18px;'>" + escapeHtml(state.profile.name) + "</div><div style='font-size:12px;opacity:.75;'>Lv." + p.level + " / XP " + p.xp + " / Streak " + p.streak + "日</div></div>" +
-      "<div style='display:grid;gap:4px;text-align:right;font-size:12px;'><b>残りセット " + p.setsLeft + "/3</b><span style='opacity:.75;'>Fatigue " + p.fatigue + "</span></div>" +
+      "<div><div style='font-weight:900;font-size:18px;'>" + escapeHtml(state.profile.name) + "</div><div style='font-size:12px;opacity:.75;'>Lv." + p.level + " / 経験値 " + p.xp + " / 連続 " + p.streak + "日</div></div>" +
+      "<div style='display:grid;gap:4px;text-align:right;font-size:12px;'><b>残りセット " + p.setsLeft + "/3</b><span style='opacity:.75;'>疲労 " + p.fatigue + "</span></div>" +
       "</div>" +
       "<div style='margin-top:8px;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11px;'>" +
       "<div class='mini'>胸<br><b>" + p.chest.toFixed(1) + "</b></div><div class='mini'>肩<br><b>" + p.shoulders.toFixed(1) + "</b></div><div class='mini'>腕<br><b>" + p.arms.toFixed(1) + "</b></div>" +
@@ -318,6 +319,7 @@
     middle.style.gridTemplateColumns = (window.innerWidth < 820) ? "1fr" : "1.05fr 1fr";
     middle.style.gap = "10px";
     middle.style.minHeight = "0";
+    middle.style.overflowY = "auto";
 
     var avatarCard = document.createElement("div");
     avatarCard.style.background = "var(--panel)";
@@ -334,10 +336,10 @@
     gameCard.style.borderRadius = "14px";
     gameCard.style.padding = "10px";
     gameCard.style.display = "grid";
-    gameCard.style.gridTemplateRows = "auto minmax(0,1fr) auto";
+    gameCard.style.gridTemplateRows = "auto auto auto";
     gameCard.innerHTML =
-      "<div><b>Bench Press</b><div style='font-size:12px;opacity:.75;'>フォーム+タイミングで成長先が変化</div></div>" +
-      "<div id='stage' style='overflow:auto'></div>" +
+      "<div><b>ベンチプレス</b><div style='font-size:12px;opacity:.75;'>フォーム+タイミングで成長先が変化</div></div>" +
+      "<div id='stage' style='overflow:auto;max-height:42svh'></div>" +
       "<button id='btnStart' class='pBtn'>セット開始</button>";
 
     middle.appendChild(avatarCard);
@@ -346,7 +348,7 @@
     var foot = document.createElement("div");
     foot.style.display = "flex";
     foot.style.gap = "8px";
-    foot.innerHTML = "<button id='btnExport' class='pBtn pBtnSub'>Export</button><button id='btnReset' class='pBtn pBtnSub'>Reset</button>";
+    foot.innerHTML = "<button id='btnExport' class='pBtn pBtnSub'>エクスポート</button><button id='btnReset' class='pBtn pBtnSub'>リセット</button>";
 
     layout.appendChild(header);
     layout.appendChild(middle);
@@ -368,21 +370,21 @@
 
     stage.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>" +
-        "<span style='font-size:12px;font-weight:900;opacity:.9;border:1px solid rgba(255,255,255,0.12);padding:6px 10px;border-radius:999px;'>READY</span>" +
-        "<span style='opacity:.7;font-size:12px;font-weight:700;'>Sets left today: <b>" + p.setsLeft + "</b></span>" +
+        "<span style='font-size:12px;font-weight:900;opacity:.9;border:1px solid rgba(255,255,255,0.12);padding:6px 10px;border-radius:999px;'>準備完了</span>" +
+        "<span style='opacity:.7;font-size:12px;font-weight:700;'>今日の残りセット: <b>" + p.setsLeft + "</b></span>" +
       "</div>" +
       "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='opacity:.7;font-size:12px;font-weight:700;'>You’ll first adjust form for 3 seconds, then do 10 reps timing.</div>";
+      "<div style='opacity:.7;font-size:12px;font-weight:700;'>最初に3秒間フォームを調整し、その後10回のタイミング操作を行います。</div>";
 
     var btn = $("#btnStart");
     if (!btn) return;
     btn.disabled = (p.setsLeft <= 0);
-    btn.textContent = (p.setsLeft <= 0) ? "No sets left today" : "Start Set";
+    btn.textContent = (p.setsLeft <= 0) ? "今日はこれ以上できません" : "セット開始";
   }
 
   function startSet() {
     var p = state.progress;
-    if (p.setsLeft <= 0) { toast("No sets left today."); return; }
+    if (p.setsLeft <= 0) { toast("今日は残りセットがありません。"); return; }
 
     run = {
       phase: "form",
@@ -403,7 +405,7 @@
 
     renderFormPhase();
     requestAnimationFrame(loop);
-    toast("Form phase: adjust!");
+    toast("フォーム調整フェーズ開始");
   }
 
   function renderFormPhase() {
@@ -412,17 +414,17 @@
 
     stage.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>" +
-        "<span style='font-size:12px;font-weight:900;opacity:.9;background:rgba(255,200,0,0.12);border:1px solid rgba(255,200,0,0.25);padding:6px 10px;border-radius:999px;'>FORM (3s)</span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Target: <b>55–70</b></span>" +
+        "<span style='font-size:12px;font-weight:900;opacity:.9;background:rgba(255,200,0,0.12);border:1px solid rgba(255,200,0,0.25);padding:6px 10px;border-radius:999px;'>フォーム調整 (3秒)</span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>目標: <b>55–70</b></span>" +
       "</div>" +
       "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='opacity:.7;font-size:12px;font-weight:700;'>Slide to set elbow flare. Try to stay in the target range.</div>" +
+      "<div style='opacity:.7;font-size:12px;font-weight:700;'>スライダーで肘の開きを調整し、目標範囲を維持しましょう。</div>" +
       "<div style='margin:10px 0;'>" +
         "<input id='formSlider' type='range' min='0' max='100' value='" + run.form + "' style='width:100%;'>" +
       "</div>" +
       "<div style='display:flex;gap:8px;flex-wrap:wrap;'>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Your form: <b id='formVal'>" + run.form + "</b></span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Time: <b id='formTime'>" + run.formTimeLeft.toFixed(1) + "s</b></span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>フォーム値: <b id='formVal'>" + run.form + "</b></span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>残り時間: <b id='formTime'>" + run.formTimeLeft.toFixed(1) + "s</b></span>" +
       "</div>";
 
     var slider = $("#formSlider");
@@ -435,7 +437,7 @@
     }
 
     var btn = $("#btnStart");
-    if (btn) { btn.disabled = true; btn.textContent = "In set..."; }
+    if (btn) { btn.disabled = true; btn.textContent = "セット中..."; }
   }
 
   function renderRepPhase() {
@@ -444,20 +446,20 @@
 
     stage.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>" +
-        "<span style='font-size:12px;font-weight:900;opacity:.9;background:rgba(134,239,172,0.12);border:1px solid rgba(134,239,172,0.25);padding:6px 10px;border-radius:999px;'>REPS (10)</span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Hit the green zone</span>" +
+        "<span style='font-size:12px;font-weight:900;opacity:.9;background:rgba(134,239,172,0.12);border:1px solid rgba(134,239,172,0.25);padding:6px 10px;border-radius:999px;'>レップ (10回)</span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>緑ゾーンでタップ</span>" +
       "</div>" +
       "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
-      "<div style='opacity:.7;font-size:12px;font-weight:700;'>Tap when the marker is in the zone. You can tap anywhere in this panel.</div>" +
+      "<div style='opacity:.7;font-size:12px;font-weight:700;'>マーカーがゾーンに入ったらタップ。パネル内どこでもタップできます。</div>" +
       "<div style='margin-top:10px;'>" +
         "<canvas id='repCanvas' width='900' height='180' style='width:100%;height:auto;border-radius:14px;'></canvas>" +
       "</div>" +
       "<div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;'>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Rep: <b id='repIdx'>" + (run.repIndex + 1) + "</b>/" + run.repsTotal + "</span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Hits: <b id='hits'>" + run.hits + "</b></span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>回数: <b id='repIdx'>" + (run.repIndex + 1) + "</b>/" + run.repsTotal + "</span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>成功: <b id='hits'>" + run.hits + "</b></span>" +
       "</div>" +
       "<div style='margin-top:10px;display:flex;justify-content:flex-end;'>" +
-        "<button id='tapBtn' style='padding:12px 14px;border-radius:12px;border:1px solid rgba(125,211,252,0.35);background:rgba(125,211,252,0.16);color:#fff;font-weight:900;'>TAP</button>" +
+        "<button id='tapBtn' style='padding:12px 14px;border-radius:12px;border:1px solid rgba(125,211,252,0.35);background:rgba(125,211,252,0.16);color:#fff;font-weight:900;'>タップ</button>" +
       "</div>";
 
     var tapBtn = $("#tapBtn");
@@ -474,21 +476,21 @@
 
     stage.innerHTML =
       "<div style='display:flex;justify-content:space-between;align-items:center;gap:10px;'>" +
-        "<span style='font-size:12px;font-weight:900;opacity:.9;border:1px solid rgba(255,255,255,0.12);padding:6px 10px;border-radius:999px;'>RESULT</span>" +
+        "<span style='font-size:12px;font-weight:900;opacity:.9;border:1px solid rgba(255,255,255,0.12);padding:6px 10px;border-radius:999px;'>結果</span>" +
         "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>" +
-          "FormAcc <b>" + Math.round(result.formAcc * 100) + "%</b> · RepAcc <b>" + Math.round(result.repAcc * 100) + "%</b>" +
+          "フォーム精度 <b>" + Math.round(result.formAcc * 100) + "%</b> ・ タイミング精度 <b>" + Math.round(result.repAcc * 100) + "%</b>" +
         "</span>" +
       "</div>" +
       "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
       "<div style='display:flex;gap:8px;flex-wrap:wrap;'>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Chest <b>+" + result.gains.chest.toFixed(2) + "</b></span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Shoulders <b>+" + result.gains.shoulders.toFixed(2) + "</b></span>" +
-        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>Arms <b>+" + result.gains.arms.toFixed(2) + "</b></span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>胸 <b>+" + result.gains.chest.toFixed(2) + "</b></span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>肩 <b>+" + result.gains.shoulders.toFixed(2) + "</b></span>" +
+        "<span style='padding:6px 10px;border:1px solid rgba(255,255,255,0.12);border-radius:999px;font-weight:800;font-size:12px;'>腕 <b>+" + result.gains.arms.toFixed(2) + "</b></span>" +
       "</div>" +
       "<hr style='border:none;border-top:1px solid rgba(255,255,255,0.10);margin:12px 0;'>" +
       "<div style='opacity:.7;font-size:12px;font-weight:700;'>" + escapeHtml(result.note) + "</div>" +
       "<div style='margin-top:12px;display:flex;justify-content:flex-end;'>" +
-        "<button id='btnDone' style='padding:12px 14px;border-radius:12px;border:1px solid rgba(125,211,252,0.35);background:rgba(125,211,252,0.16);color:#fff;font-weight:900;'>Done</button>" +
+        "<button id='btnDone' style='padding:12px 14px;border-radius:12px;border:1px solid rgba(125,211,252,0.35);background:rgba(125,211,252,0.16);color:#fff;font-weight:900;'>閉じる</button>" +
       "</div>";
 
     var btnDone = $("#btnDone");
@@ -498,7 +500,7 @@
         var bs = $("#btnStart");
         if (bs) bs.disabled = false;
         viewGame();
-        toast("Saved.");
+        toast("保存しました。");
       });
     }
   }
@@ -554,9 +556,9 @@
     var inZone = (run.barX >= run.zoneA && run.barX <= run.zoneB);
     if (inZone) {
       run.hits++;
-      toast("Good rep!");
+      toast("ナイス！");
     } else {
-      toast("Miss!");
+      toast("ミス");
     }
 
     run.repIndex++;
@@ -609,7 +611,7 @@
     while (p.xp >= xpToNext(p.level)) {
       p.xp -= xpToNext(p.level);
       p.level++;
-      toast("Level up! " + p.level);
+      toast("レベルアップ！ Lv." + p.level);
     }
 
     p.chest += gainChest;
@@ -621,9 +623,9 @@
 
     save();
 
-    var note = "Solid form range — most gains stayed on target.";
-    if (formVal < 45) note = "Form was too close — gains leaked into Arms.";
-    else if (formVal > 75) note = "Form was too wide — gains leaked into Shoulders.";
+    var note = "フォームが安定し、狙った部位をしっかり鍛えられました。";
+    if (formVal < 45) note = "フォームが狭すぎて、腕に負荷が逃げました。";
+    else if (formVal > 75) note = "フォームが広すぎて、肩に負荷が逃げました。";
 
     return {
       formAcc: formAcc,
@@ -898,7 +900,7 @@
 
     ctx.fillStyle = "rgba(40,40,50,0.85)";
     ctx.font = "800 15px -apple-system,system-ui";
-    var nm = (state.profile.name || (isPreview ? "Preview" : "Player")).slice(0, 12);
+    var nm = (state.profile.name || (isPreview ? "プレビュー" : "プレイヤー")).slice(0, 12);
     ctx.fillText(nm, 14, 24);
   }
 
@@ -931,7 +933,7 @@
 
     ctx.fillStyle = "rgba(231,231,234,0.75)";
     ctx.font = "700 20px -apple-system,system-ui";
-    ctx.fillText("Tap in the zone", bx, 36);
+    ctx.fillText("ゾーン内でタップ", bx, 36);
   }
 
   // ---------- Reset / Export ----------
@@ -944,7 +946,7 @@
       btnReset.addEventListener("click", function () {
         if (resetStep === 0) {
           resetStep = 1;
-          toast("もう一度Resetで初期化");
+          toast("もう一度リセットで初期化");
           setTimeout(function () { resetStep = 0; }, 2500);
           return;
         }
@@ -966,15 +968,15 @@
           var data = JSON.stringify(state, null, 2);
           if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(data).then(function () {
-              toast("Save data copied.");
+              toast("セーブデータをコピーしました。");
             }).catch(function () {
-              prompt("Copy save data:", data);
+              prompt("セーブデータをコピー:", data);
             });
           } else {
-            prompt("Copy save data:", data);
+            prompt("セーブデータをコピー:", data);
           }
         } catch (e) {
-          prompt("Copy save data:", JSON.stringify(state));
+          prompt("セーブデータをコピー:", JSON.stringify(state));
         }
       });
     }
